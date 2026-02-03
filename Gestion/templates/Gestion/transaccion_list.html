@@ -1,0 +1,77 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}Transacciones - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Transacciones Comerciales</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'compra-create' %}" class="btn btn-sm btn-success me-2">
+            <i class="bi bi-cart-plus"></i> Nueva Compra
+        </a>
+        <a href="{% url 'venta-create' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-cart-dash"></i> Nueva Venta
+        </a>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Entidad</th>
+                <th>Doc. Nro</th>
+                <th>Monto Total</th>
+                <th>Estado Pago</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for transaccion in transacciones %}
+            <tr>
+                <td>#{{ transaccion.pk }}</td>
+                <td>{{ transaccion.fecha|date:"d/m/Y" }}</td>
+                <td>
+                    {% if transaccion.tipo_operacion == 'COMPRA' %}
+                    <span class="badge bg-danger">Compra</span>
+                    {% else %}
+                    <span class="badge bg-success">Venta</span>
+                    {% endif %}
+                </td>
+                <td>{{ transaccion.entidad.nombre_razon_social }}</td>
+                <td>{{ transaccion.numero_documento|default:"-" }}</td>
+                <td><strong>${{ transaccion.monto_total }}</strong></td>
+                <td>
+                    {% if transaccion.estado_pago == 'PENDIENTE' %}
+                    <span class="badge bg-warning text-dark">Pendiente</span>
+                    {% elif transaccion.estado_pago == 'PAGADO' %}
+                    <span class="badge bg-success">Pagado</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Anulado</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="btn-group">
+                        <a href="{% url 'transaccion-update' transaccion.pk %}" class="btn btn-sm btn-outline-secondary"
+                            title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="{% url 'transaccion-detail' transaccion.pk %}" class="btn btn-sm btn-outline-info"
+                            title="Ver Detalle">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center">No hay transacciones registradas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

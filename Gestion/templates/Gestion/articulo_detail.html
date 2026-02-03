@@ -1,0 +1,55 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}{{ title }} - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ title }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'articulo-update' articulo.pk %}" class="btn btn-sm btn-outline-primary me-2">
+            <i class="bi bi-pencil"></i> Editar
+        </a>
+        <a href="{% url 'articulo-kardex' articulo.pk %}" class="btn btn-sm btn-outline-info me-2">
+            <i class="bi bi-clock-history"></i> Kardex
+        </a>
+        <a href="{% url 'articulo-list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Nombre</dt>
+            <dd class="col-sm-9">{{ articulo.nombre }}</dd>
+
+            <dt class="col-sm-3">Tipo</dt>
+            <dd class="col-sm-9">{{ articulo.get_tipo_display }}</dd>
+
+            <dt class="col-sm-3">Unidad de Medida</dt>
+            <dd class="col-sm-9">{{ articulo.unidad_medida }}</dd>
+
+            <dt class="col-sm-3">Precio Referencia</dt>
+            <dd class="col-sm-9">${{ articulo.precio_referencia }}</dd>
+
+            <dt class="col-sm-3">Controlar Stock?</dt>
+            <dd class="col-sm-9">
+                {% if articulo.controlar_stock %}Sí{% else %}No{% endif %}
+            </dd>
+
+            {% if articulo.controlar_stock %}
+            <dt class="col-sm-3">Stock Actual</dt>
+            <dd class="col-sm-9">
+                {{ articulo.stock_actual }}
+                {% if articulo.stock_actual <= articulo.stock_minimo %} <span class="badge bg-danger">Bajo Stock</span>
+                    {% endif %}
+            </dd>
+
+            <dt class="col-sm-3">Stock Mínimo</dt>
+            <dd class="col-sm-9">{{ articulo.stock_minimo }}</dd>
+            {% endif %}
+        </dl>
+    </div>
+</div>
+{% endblock %}

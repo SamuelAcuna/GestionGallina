@@ -1,0 +1,41 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}{{ title }} - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ title }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'entidad-update' entidad.pk %}" class="btn btn-sm btn-outline-primary me-2">
+            <i class="bi bi-pencil"></i> Editar
+        </a>
+        <a href="{% url 'entidad-list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Razón Social</dt>
+            <dd class="col-sm-9">{{ entidad.nombre_razon_social }}</dd>
+
+            <dt class="col-sm-3">RUT</dt>
+            <dd class="col-sm-9">{{ entidad.rut|default:"-" }}</dd>
+
+            <dt class="col-sm-3">Roles</dt>
+            <dd class="col-sm-9">
+                {% if entidad.es_cliente %}<span class="badge bg-info text-dark">Cliente</span>{% endif %}
+                {% if entidad.es_proveedor %}<span class="badge bg-warning text-dark">Proveedor</span>{% endif %}
+            </dd>
+
+            <dt class="col-sm-3">Teléfono</dt>
+            <dd class="col-sm-9">{{ entidad.telefono|default:"-" }}</dd>
+
+            <dt class="col-sm-3">Dirección</dt>
+            <dd class="col-sm-9">{{ entidad.direccion|default:"-" }}</dd>
+        </dl>
+    </div>
+</div>
+{% endblock %}

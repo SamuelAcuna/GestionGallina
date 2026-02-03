@@ -1,0 +1,74 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}Resumen General de Lotes - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Resumen General de Lotes</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'lote-list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-list-ul"></i> Ver Lista Completa
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    {% for item in lote_data %}
+    <div class="col-md-6 col-xl-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ item.lote.galpon.nombre }}</h5>
+                <span class="badge bg-primary rounded-pill">{{ item.lote.aves_actuales }} Aves</span>
+            </div>
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">{{ item.lote.raza }} - {{ item.lote.fecha_inicio|timesince }}
+                </h6>
+
+                <hr>
+
+                <h6 class="text-secondary small text-uppercase fw-bold">Últimos 5 Días</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-borderless table-hover mb-0" style="font-size: 0.9em;">
+                        <thead>
+                            <tr class="text-muted border-bottom">
+                                <th>Fecha</th>
+                                <th class="text-end">Prod. (H)</th>
+                                <th class="text-end">Alim. (Kg)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in item.stats %}
+                            <tr>
+                                <td>{{ stat.date|date:"d/m" }}</td>
+                                <td
+                                    class="text-end {% if stat.produccion > 0 %}text-success fw-bold{% else %}text-muted{% endif %}">
+                                    {{ stat.produccion }}
+                                </td>
+                                <td
+                                    class="text-end {% if stat.consumo > 0 %}text-warning fw-bold{% else %}text-muted{% endif %}">
+                                    {{ stat.consumo }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between">
+                <a href="{% url 'lote-detail' item.lote.pk %}" class="btn btn-sm btn-outline-primary w-100 me-1">Detalle
+                    Admin</a>
+                <a href="{% url 'kiosco-menu' item.lote.pk %}"
+                    class="btn btn-sm btn-outline-warning text-dark w-100 ms-1">Modo Kiosco</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info text-center">
+            No hay lotes activos para mostrar. <a href="{% url 'lote-create' %}" class="alert-link">Inicia un nuevo
+                lote.</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

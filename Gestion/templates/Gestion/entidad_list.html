@@ -1,0 +1,53 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}Entidades - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Entidades (Clientes/Proveedores)</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'entidad-create' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg"></i> Nueva Entidad
+        </a>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Razón Social</th>
+                <th>RUT</th>
+                <th>Roles</th>
+                <th>Teléfono</th>
+                <th>Dirección</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entidad in entidades %}
+            <tr>
+                <td>{{ entidad.nombre_razon_social }}</td>
+                <td>{{ entidad.rut|default:"-" }}</td>
+                <td>
+                    {% if entidad.es_cliente %}<span class="badge bg-info text-dark">Cliente</span>{% endif %}
+                    {% if entidad.es_proveedor %}<span class="badge bg-warning text-dark">Proveedor</span>{% endif %}
+                </td>
+                <td>{{ entidad.telefono|default:"-" }}</td>
+                <td>{{ entidad.direccion|truncatechars:30|default:"-" }}</td>
+                <td>
+                    <a href="{% url 'entidad-update' entidad.pk %}" class="btn btn-sm btn-outline-secondary"><i
+                            class="bi bi-pencil"></i></a>
+                    <a href="{% url 'entidad-detail' entidad.pk %}" class="btn btn-sm btn-outline-info"
+                        title="Ver Detalle"><i class="bi bi-eye"></i></a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center">No hay entidades registradas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

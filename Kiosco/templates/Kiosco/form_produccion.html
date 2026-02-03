@@ -1,0 +1,44 @@
+{% extends 'Kiosco/base_kiosco.html' %}
+
+{% block content %}
+<h3 class="text-center mb-4">Registrar Producción - {{ lote.galpon.nombre }}</h3>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card p-4 shadow-sm border-0" style="border-radius: 15px;">
+            <div class="text-center mb-4">
+                <i class="bi bi-egg-fill text-success" style="font-size: 4rem;"></i>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-4">
+                    <label class="form-label h5">Producto</label>
+                    <select name="articulo" class="form-select form-select-lg" required>
+                        {% for item in productos %}
+                        <option value="{{ item.pk }}">{{ item.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label h5">Cantidad Recogida</label>
+                    <input type="number" step="1" name="cantidad" class="form-control form-control-lg" placeholder="0"
+                        required>
+                </div>
+
+                <button type="submit" class="btn btn-success btn-lg w-100 py-3 fw-bold">
+                    <i class="bi bi-check-lg"></i> GUARDAR PRODUCCIÓN
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="text-center mt-4">
+    <a href="{% url 'kiosco-menu' lote.pk %}" class="btn btn-outline-secondary btn-lg px-5">
+        <i class="bi bi-x-lg"></i> Cancelar
+    </a>
+</div>
+{% endblock %}

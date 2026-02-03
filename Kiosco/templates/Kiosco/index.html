@@ -1,0 +1,26 @@
+{% extends 'Kiosco/base_kiosco.html' %}
+
+{% block content %}
+<h2 class="text-center mb-4">Seleccione Lote</h2>
+
+<div class="row">
+    {% for lote in lotes %}
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'kiosco-menu' lote.pk %}" class="btn btn-light w-100 kiosk-btn text-primary border-primary">
+            <i class="bi bi-house-door"></i>
+            {{ lote.galpon.nombre }}
+            <small class="text-muted fs-6">{{ lote.raza }}</small>
+        </a>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center">
+        <div class="alert alert-warning">No hay lotes activos.</div>
+        <a href="/" class="btn btn-secondary">Ir al Panel de Administración</a>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="text-center mt-5">
+    <a href="/" class="btn btn-outline-secondary">Salir al Panel Admin</a>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}Lotes - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Lotes de Aves</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'lote-create' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg"></i> Nuevo Lote
+        </a>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Galpón</th>
+                <th>Raza</th>
+                <th>Aves Iniciales</th>
+                <th>Aves Actuales</th>
+                <th>Fecha Inicio</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lote in lotes %}
+            <tr class="{% if not lote.estado %}table-secondary{% endif %}">
+                <td>#{{ lote.pk }}</td>
+                <td>{{ lote.galpon.nombre }}</td>
+                <td>{{ lote.raza }}</td>
+                <td>{{ lote.aves_iniciales }}</td>
+                <td><strong>{{ lote.aves_actuales }}</strong></td>
+                <td>{{ lote.fecha_inicio|date:"d/m/Y" }}</td>
+                <td>
+                    {% if lote.estado %}
+                    <span class="badge bg-success">ACTIVO</span>
+                    {% else %}
+                    <span class="badge bg-secondary">CERRADO</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'lote-detail' lote.pk %}" class="btn btn-sm btn-info text-white"
+                        title="Ver Detalle"><i class="bi bi-eye"></i></a>
+                    <a href="{% url 'lote-update' lote.pk %}" class="btn btn-sm btn-outline-secondary" title="Editar"><i
+                            class="bi bi-pencil"></i></a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center">No hay lotes registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

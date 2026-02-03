@@ -1,0 +1,38 @@
+{% extends 'Kiosco/base_kiosco.html' %}
+
+{% block content %}
+<h2 class="text-center mb-2">{{ lote.galpon.nombre }}</h2>
+<p class="text-center text-muted mb-5">¿Qué desea registrar?</p>
+
+<div class="row justify-content-center">
+    <!-- Alimentación -->
+    <div class="col-md-4">
+        <a href="{% url 'kiosco-consumo' lote.pk %}" class="btn btn-warning w-100 kiosk-btn text-dark">
+            <i class="bi bi-basket2"></i>
+            Consumo Alimento
+        </a>
+    </div>
+
+    <!-- Producción -->
+    <div class="col-md-4">
+        <a href="{% url 'kiosco-produccion' lote.pk %}" class="btn btn-success w-100 kiosk-btn text-white">
+            <i class="bi bi-egg-fill"></i>
+            Producción Huevos
+        </a>
+    </div>
+
+    <!-- Bajas -->
+    <div class="col-md-4">
+        <a href="{% url 'kiosco-bajas' lote.pk %}" class="btn btn-danger w-100 kiosk-btn text-white">
+            <i class="bi bi-heart-pulse-fill"></i>
+            Registrar Bajas
+        </a>
+    </div>
+</div>
+
+<div class="text-center mt-4">
+    <a href="{% url 'kiosco-index' %}" class="btn btn-outline-secondary btn-lg px-5">
+        <i class="bi bi-arrow-left"></i> Cambiar Lote
+    </a>
+</div>
+{% endblock %}

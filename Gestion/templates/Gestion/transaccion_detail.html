@@ -1,0 +1,92 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}{{ title }} - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ title }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <!-- Edit is tricky for completed transactions, usually we allow restricted edits -->
+        <a href="{% url 'transaccion-update' transaccion.pk %}" class="btn btn-sm btn-outline-primary me-2">
+            <i class="bi bi-pencil"></i> Editar
+        </a>
+        <a href="{% url 'transaccion-list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Header -->
+    <div class="col-md-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Datos Generales</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Tipo:</strong>
+                        {% if transaccion.tipo_operacion == 'COMPRA' %}
+                        <span class="badge bg-danger">COMPRA</span>
+                        {% else %}
+                        <span class="badge bg-success">VENTA</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Fecha:</strong> {{ transaccion.fecha|date:"d/m/Y" }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Entidad:</strong> {{ transaccion.entidad.nombre_razon_social }}
+                    </div>
+                    <div class="col-md-4 mt-2">
+                        <strong>N° Documento:</strong> {{ transaccion.numero_documento|default:"-" }}
+                    </div>
+                    <div class="col-md-4 mt-2">
+                        <strong>Estado Pago:</strong> {{ transaccion.get_estado_pago_display }}
+                    </div>
+                    <div class="col-md-4 mt-2">
+                        <strong>Método Pago:</strong> {{ transaccion.metodo_pago|default:"-" }}
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <h4 class="text-end">Total: ${{ transaccion.monto_total }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details -->
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Ítems</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Artículo</th>
+                                <th>Cantidad</th>
+                                <th>Precio Unit.</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detalle in transaccion.detalles.all %}
+                            <tr>
+                                <td>{{ detalle.articulo.nombre }}</td>
+                                <td>{{ detalle.cantidad }}</td>
+                                <td>${{ detalle.precio_unitario }}</td>
+                                <td>${{ detalle.subtotal }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

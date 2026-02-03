@@ -1,0 +1,458 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}{{ title }} - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ title }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'transaccion-list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a Transacciones
+        </a>
+    </div>
+</div>
+
+<form method="post" id="transaccion-form">
+    {% csrf_token %}
+
+    <!-- Encabezado -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Datos Generales</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Entidad ({% if tipo == 'COMPRA' %}Proveedor{% else %}Cliente{% endif %})</label>
+                    {{ form.entidad }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fecha</label>
+                    {{ form.fecha }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">N° Documento</label>
+                    {{ form.numero_documento }}
+                </div>
+                <div class="col-md-2 d-none">
+                    {{ form.tipo_operacion }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Estado Pago</label>
+                    {{ form.estado_pago }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Método Pago</label>
+                    {{ form.metodo_pago }}
+                </div>
+            </div>
+            {% if form.errors %}
+            <div class="alert alert-danger mt-3">{{ form.errors }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Detalles (Table View backed by Hidden Formset) -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Ítems</h5>
+            <button type="button" class="btn btn-sm btn-success" id="open-add-modal-btn">
+                <i class="bi bi-plus-lg"></i> Agregar Ítem
+            </button>
+        </div>
+        <div class="card-body p-0">
+            {% if formset.non_form_errors %}
+            <div class="alert alert-danger m-3">
+                <h6 class="alert-heading">Error en items:</h6>
+                {{ formset.non_form_errors }}
+            </div>
+            {% endif %}
+
+            <div class="table-responsive">
+                <table class="table table-striped mb-0" id="items-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%">Artículo</th>
+                            <th style="width: 15%">Cantidad</th>
+                            <th style="width: 25%">Precio Total</th>
+                            <th style="width: 10%">Act. Ref?</th>
+                            <th style="width: 10%">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="formset-container">
+                        {{ formset.management_form }}
+                        {% for form in formset %}
+                        <tr class="item-row" data-row-index="{{ forloop.counter0 }}">
+                            {{ form.id }}
+                            <!-- Hidden Inputs for Submission -->
+                            <td class="d-none">
+                                {{ form.articulo }} <!-- Contains Value -->
+                                {{ form.cantidad }}
+                                {{ form.precio_unitario }}
+                                <input type="hidden" name="{{ form.prefix }}-update_price" class="update-price-input"
+                                    value="{% if form.initial.update_price %}1{% endif %}">
+                            </td>
+
+                            <!-- Visible Read-Only Cells -->
+                            <td class="align-middle">
+                                <span class="display-articulo">
+                                    <!-- JS will populate text from select on load, or fallback to string repr -->
+                                    {{ form.articulo.value|default_if_none:"-" }}
+                                </span>
+                                {% if form.articulo.errors %}<div class="text-danger small">{{
+                                    form.articulo.errors|striptags }}</div>{% endif %}
+                            </td>
+                            <td class="align-middle">
+                                <span class="display-cantidad">{{ form.cantidad.value|default:0 }}</span>
+                            </td>
+                            <td class="align-middle">
+                                $<span class="display-precio">{{ form.precio_unitario.value|default:0 }}</span> (Unit.)
+                            </td>
+                            <td class="text-center align-middle">
+                                <span class="display-update-ref text-muted">
+                                    <i class="bi bi-dash-circle"></i>
+                                </span>
+                            </td>
+                            <td class="text-end align-middle">
+                                {% if formset.can_delete %}
+                                <div class="d-none">{{ form.DELETE }}</div>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-outline-primary edit-row-btn me-1">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-row-btn">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-check-lg"></i> Registrar Transacción
+        </button>
+    </div>
+</form>
+
+<!-- Modal for Add/Edit Item -->
+<div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="itemModalLabel">Agregar Ítem</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Buscar Artículo</label>
+                    <!-- Filter Input -->
+                    <input type="text" class="form-control mb-2" id="modal-filter-input"
+                        placeholder="Escriba para filtrar lista...">
+                    <!-- Article Select -->
+                    <select class="form-select" id="modal-articulo-select" size="5">
+                        <!-- Options populated via JS from hidden template or API -->
+                    </select>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" step="0.01" class="form-control" id="modal-cantidad">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Precio Unitario</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" class="form-control" id="modal-precio">
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 form-check">
+                    <input class="form-check-input" type="checkbox" id="modal-update-price">
+                    <label class="form-check-label" for="modal-update-price">
+                        Actualizar Precio Referencia del Artículo (Base)
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="modal-save-btn">Guardar Ítem</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Template for New Rows -->
+<table style="display:none">
+    <tbody id="empty-form-template">
+        <tr class="item-row" data-row-index="__prefix__">
+            {{ formset.empty_form.id }}
+            <!-- Hidden Inputs -->
+            <td class="d-none">
+                {{ formset.empty_form.articulo }}
+                {{ formset.empty_form.cantidad }}
+                {{ formset.empty_form.precio_unitario }}
+                <input type="hidden" name="{{ formset.empty_form.prefix }}-update_price" class="update-price-input"
+                    value="">
+            </td>
+
+            <!-- Display Cells -->
+            <td class="align-middle"><span class="display-articulo">-</span></td>
+            <td class="align-middle"><span class="display-cantidad">0</span></td>
+            <td class="align-middle">$<span class="display-precio">0</span> (Unit.)</td>
+            <td class="text-center align-middle">
+                <span class="display-update-ref text-muted"><i class="bi bi-dash-circle"></i></span>
+            </td>
+            <td class="text-end align-middle">
+                <button type="button" class="btn btn-sm btn-outline-primary edit-row-btn me-1"><i
+                        class="bi bi-pencil"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-row-btn"><i
+                        class="bi bi-trash"></i></button>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- Data Source for Options (Hidden Select to Clone Options From) -->
+<div class="d-none">
+    {{ formset.empty_form.articulo }} <!-- We will grab options from here -->
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Data & Config
+        const preciosRef = {{ precios_json| safe
+    }};
+    const itemsTableBody = document.getElementById('formset-container');
+    const totalFormsInput = document.getElementById('id_detalletransaccion_set-TOTAL_FORMS');
+    const emptyFormHTML = document.getElementById('empty-form-template').innerHTML;
+
+    // Modal Elements
+    const modalEl = document.getElementById('itemModal');
+    const itemModal = new bootstrap.Modal(modalEl);
+    const modalSaveBtn = document.getElementById('modal-save-btn');
+    const modalFilterInput = document.getElementById('modal-filter-input');
+    const modalSelect = document.getElementById('modal-articulo-select');
+    const modalQty = document.getElementById('modal-cantidad');
+    const modalPrice = document.getElementById('modal-precio');
+    const modalUpdateCheck = document.getElementById('modal-update-price');
+
+    // State
+    let editingRowIndex = null; // null = creating new
+
+    // ----------------------------------------------------------------
+    // 1. Initialization: Populate Modal Select from Django Source
+    // ----------------------------------------------------------------
+    // We find the 'empty form' article select to copy options
+    const sourceSelect = document.querySelector('#empty-form-template select[name$="articulo"]');
+    if (sourceSelect) {
+        // Clone options
+        modalSelect.innerHTML = sourceSelect.innerHTML;
+    } else {
+        // Fallback: try to find from a visible row if any, or request server? 
+        // Usually empty form is rendered. 
+        // Note: The template above has {{ formset.empty_form.articulo }} inside hidden table.
+        // Because it is hidden, browser might not render it fully interactive but DOM exists.
+        // Let's ensure we get the options.
+        // Actually the selector "#empty-form-template ..." queries inside string HTML if not careful.
+        // But getElementById returns element. However, <template> or hidden <table> content?
+        // We put it in <table style="display:none"> so it is in DOM.
+
+        // Let's actually use the hidden div at bottom I added "Data Source"
+        const hiddenSource = document.querySelector('.d-none select[name*="articulo"]');
+        if (hiddenSource) modalSelect.innerHTML = hiddenSource.innerHTML;
+    }
+
+    // ----------------------------------------------------------------
+    // 2. Modal Logic
+    // ----------------------------------------------------------------
+
+    // Open Modal Handler
+    function openModal(rowIndex = null) {
+        editingRowIndex = rowIndex;
+        modalFilterInput.value = '';
+        filterOptions(''); // Reset filter
+
+        if (rowIndex !== null) {
+            // EDIT MODE
+            document.getElementById('itemModalLabel').innerText = 'Editar Ítem';
+
+            // Get Row
+            const row = itemsTableBody.children[rowIndex];
+
+            // Read Inputs from Row
+            const articleVal = row.querySelector('select[name$="articulo"]').value;
+            const qtyVal = row.querySelector('input[name$="cantidad"]').value;
+            const priceVal = row.querySelector('input[name$="precio_unitario"]').value;
+            const updateVal = row.querySelector('input.update-price-input').value;
+
+            // Set Modal Values
+            modalSelect.value = articleVal;
+            modalQty.value = qtyVal;
+            modalPrice.value = priceVal;
+            modalUpdateCheck.checked = (updateVal === '1');
+
+        } else {
+            // CREATE MODE
+            document.getElementById('itemModalLabel').innerText = 'Agregar Ítem';
+            modalSelect.selectedIndex = 0; // Default
+            modalQty.value = '';
+            modalPrice.value = '';
+            modalUpdateCheck.checked = false;
+        }
+
+        itemModal.show();
+    }
+
+    // Filter Options logic
+    modalFilterInput.addEventListener('input', function (e) {
+        filterOptions(e.target.value.toLowerCase());
+    });
+
+    function filterOptions(term) {
+        const options = modalSelect.options;
+        for (let i = 0; i < options.length; i++) {
+            const txt = options[i].text.toLowerCase();
+            if (txt.includes(term)) {
+                options[i].style.display = '';
+                options[i].hidden = false;
+            } else {
+                options[i].style.display = 'none';
+                options[i].hidden = true;
+            }
+        }
+    }
+
+    // Auto-Price Logic in Modal
+    modalSelect.addEventListener('change', function () {
+        const id = this.value;
+        if (preciosRef[id]) {
+            modalPrice.value = preciosRef[id];
+        }
+    });
+
+    // Save Handler
+    modalSaveBtn.addEventListener('click', function () {
+        // Validate
+        if (!modalSelect.value) { alert("Seleccione un artículo"); return; }
+        if (!modalQty.value || parseFloat(modalQty.value) <= 0) { alert("Cantidad inválida"); return; }
+        if (!modalPrice.value) { alert("Precio inválido"); return; }
+
+        let row;
+
+        if (editingRowIndex === null) {
+            // CREATE NEW ROW
+            const formIdx = parseInt(totalFormsInput.value);
+            const newHtml = emptyFormHTML.replace(/__prefix__/g, formIdx);
+            itemsTableBody.insertAdjacentHTML('beforeend', newHtml);
+            row = itemsTableBody.lastElementChild;
+            totalFormsInput.value = formIdx + 1;
+        } else {
+            // EDIT EXISTING
+            row = itemsTableBody.children[editingRowIndex];
+        }
+
+        // Sync Modal Data -> Row Hidden Inputs
+        row.querySelector('select[name$="articulo"]').value = modalSelect.value;
+        row.querySelector('input[name$="cantidad"]').value = modalQty.value;
+        row.querySelector('input[name$="precio_unitario"]').value = modalPrice.value;
+        row.querySelector('input.update-price-input').value = modalUpdateCheck.checked ? '1' : '';
+
+        // Sync Visual Display
+        row.querySelector('.display-articulo').innerText = modalSelect.options[modalSelect.selectedIndex].text;
+        row.querySelector('.display-cantidad').innerText = modalQty.value;
+        row.querySelector('.display-precio').innerText = modalPrice.value;
+
+        const updateIcon = row.querySelector('.display-update-ref');
+        if (modalUpdateCheck.checked) {
+            updateIcon.innerHTML = '<i class="bi bi-check-circle-fill text-info"></i>';
+            updateIcon.title = "Se actualizará precio base";
+        } else {
+            updateIcon.innerHTML = '<i class="bi bi-dash-circle text-muted"></i>';
+            updateIcon.title = "";
+        }
+
+        itemModal.hide();
+    });
+
+
+    // ----------------------------------------------------------------
+    // 3. Table Actions (Edit / Delete)
+    // ----------------------------------------------------------------
+    document.getElementById('open-add-modal-btn').addEventListener('click', () => openModal(null));
+
+    itemsTableBody.addEventListener('click', function (e) {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+
+        const row = btn.closest('tr');
+        // Get index relative to tbody children
+        const rowIndex = Array.from(itemsTableBody.children).indexOf(row);
+
+        if (btn.classList.contains('remove-row-btn')) {
+            // Remove
+            if (itemsTableBody.children.length > 0) {
+                // Mark for deletion if existing? 
+                // For creation form, just remove from DOM. 
+                // Check if it has an ID (saved). If so, we check DELETE box.
+                const delBox = row.querySelector('input[name$="DELETE"]');
+                if (delBox) {
+                    delBox.checked = true;
+                    row.style.display = 'none';
+                } else {
+                    row.remove();
+                    updateFormIndices();
+                }
+            }
+        } else if (btn.classList.contains('edit-row-btn')) {
+            openModal(rowIndex);
+        }
+    });
+
+    // ----------------------------------------------------------------
+    // 4. Utils
+    // ----------------------------------------------------------------
+    function updateFormIndices() {
+        // Re-index logic is needed if we physically remove rows in a CREATE view
+        // to maintain sequential POST data form-0, form-1, etc.
+        Array.from(itemsTableBody.children).forEach((row, index) => {
+            if (row.style.display === 'none') return; // Skip deleted? NO, index must be sequential for *posted* forms usually.
+            // Actually Django handles gaps if management form is correct? 
+            // No, Django formsets default behaviour expects sequential 0..N-1
+            // So we MUST re-index visible rows if we truly removed them.
+
+            const inputs = row.querySelectorAll('input, select, textarea');
+            inputs.forEach(el => {
+                if (el.name) el.name = el.name.replace(/-\d+-/, `-${index}-`);
+                if (el.id) el.id = el.id.replace(/-\d+-/, `-${index}-`);
+            });
+        });
+        // Update total forms to count of visible rows (if we removed)
+        // Note: If we support 'DELETE' widget, we shouldn't purely re-index.
+        // But this view is primarily for NEW transactions.
+        totalFormsInput.value = itemsTableBody.children.length;
+    }
+
+    // Initialization: Render visual text for any existing rows (e.g. if form had errors)
+    Array.from(itemsTableBody.children).forEach(row => {
+        const sel = row.querySelector('select[name$="articulo"]');
+        const qty = row.querySelector('input[name$="cantidad"]');
+        const prc = row.querySelector('input[name$="precio_unitario"]');
+        const upd = row.querySelector('input.update-price-input');
+
+        if (sel && sel.selectedIndex >= 0) {
+            row.querySelector('.display-articulo').innerText = sel.options[sel.selectedIndex].text;
+        }
+        if (qty) row.querySelector('.display-cantidad').innerText = qty.value;
+        if (prc) row.querySelector('.display-precio').innerText = prc.value;
+        if (upd && upd.value === '1') {
+            row.querySelector('.display-update-ref').innerHTML = '<i class="bi bi-check-circle-fill text-info"></i>';
+        }
+    });
+        });
+</script>
+{% endblock %}

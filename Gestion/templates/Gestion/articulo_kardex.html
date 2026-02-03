@@ -1,0 +1,83 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}Kardex - {{ articulo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Historial de Movimientos: {{ articulo.nombre }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'articulo-list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a Artículos
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body py-2 text-center">
+                <small class="text-muted text-uppercase">Stock Actual</small>
+                <h3
+                    class="mb-0 fw-bold {% if articulo.stock_actual <= articulo.stock_minimo %}text-danger{% else %}text-primary{% endif %}">
+                    {{ articulo.stock_actual }}
+                </h3>
+                <small>{{ articulo.unidad_medida }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <!-- Placeholder for future stats -->
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Detalle / Documento</th>
+                <th class="text-end">Cantidad</th>
+                <th class="text-end">Saldo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in history %}
+            <tr>
+                <td>{{ row.fecha|date:"d/m/Y H:i" }}</td>
+                <td>
+                    {% if row.tipo == 'COMPRA' %}
+                    <span class="badge bg-success">COMPRA</span>
+                    {% elif row.tipo == 'PRODUCCION' %}
+                    <span class="badge bg-success">PRODUCCIÓN</span>
+                    {% elif row.tipo == 'VENTA' %}
+                    <span class="badge bg-danger">VENTA</span>
+                    {% elif row.tipo == 'CONSUMO' %}
+                    <span class="badge bg-warning text-dark">CONSUMO</span>
+                    {% elif row.tipo == 'AJUSTE' %}
+                    <span class="badge bg-info text-dark">AJUSTE</span>
+                    {% elif row.tipo == 'EDICION' %}
+                    <span class="badge bg-secondary">EDICIÓN</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ row.get_tipo_display|upper }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ row.descripcion }}</td>
+                <td class="text-end fw-bold">
+                    {{ row.cantidad }}
+                </td>
+                <td class="text-end text-muted">
+                    {{ row.saldo_posterior }}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center py-4 text-muted">
+                    No hay movimientos registrados para este artículo.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

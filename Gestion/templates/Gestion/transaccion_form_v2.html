@@ -1,0 +1,390 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}{{ title }} - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ title }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'transaccion-list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a Transacciones
+        </a>
+    </div>
+</div>
+
+<!-- MAIN FORM -->
+<form method="post" id="main-form">
+    {% csrf_token %}
+
+    <!-- 1. Header Fields -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Datos Generales</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Entidad
+                        ({% if tipo == 'COMPRA' %}Proveedor{% else %}Cliente{% endif %})</label>
+                    {{ form.entidad }}
+                    {% if form.entidad.errors %}<div class="text-danger small">{{ form.entidad.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Fecha</label>
+                    {{ form.fecha }}
+                    {% if form.fecha.errors %}<div class="text-danger small">{{ form.fecha.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">N° Documento</label>
+                    {{ form.numero_documento }}
+                    {% if form.numero_documento.errors %}<div class="text-danger small">
+                        {{ form.numero_documento.errors|striptags }}</div>{% endif %}
+                </div>
+                <!-- Hidden Type -->
+                <div class="d-none">
+                    {{ form.tipo_operacion }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Estado Pago</label>
+                    {{ form.estado_pago }}
+                    {% if form.estado_pago.errors %}<div class="text-danger small">
+                        {{ form.estado_pago.errors|striptags }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Método Pago</label>
+                    {{ form.metodo_pago }}
+                    {% if form.metodo_pago.errors %}<div class="text-danger small">
+                        {{ form.metodo_pago.errors|striptags }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Items Table (Visual representation of Formset) -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Ítems</h5>
+            <button type="button" class="btn btn-sm btn-success" id="btn-open-modal">
+                <i class="bi bi-plus-lg"></i> Agregar Ítem
+            </button>
+        </div>
+
+        <div class="card-body p-0">
+            {% if formset.non_form_errors %}
+            <div class="alert alert-danger m-3">
+                {{ formset.non_form_errors }}
+            </div>
+            {% endif %}
+
+            <div class="table-responsive">
+                <table class="table table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%">Artículo</th>
+                            <th style="width: 15%">Cantidad</th>
+                            <th style="width: 20%">Precio Unit.</th>
+                            <th style="width: 15%">Subtotal (Est.)</th>
+                            <th style="width: 10%">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="visible-table-body">
+                        <!-- Rows rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="text-center py-4 text-muted" style="display:none;">
+                No hay ítems agregados.
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Hidden Formset Container -->
+    <div id="hidden-formset-container" style="display:none;">
+        {{ formset.management_form }}
+        <div id="formset-rows">
+            {% for form in formset %}
+            <div class="hidden-row" data-index="{{ forloop.counter0 }}">
+                {{ form.id }}
+                {{ form.articulo }}
+                {{ form.cantidad }}
+                {{ form.precio_unitario }}
+                <input type="checkbox" name="{{ form.prefix }}-DELETE">
+                <input type="hidden" name="{{ form.prefix }}-update_price"
+                    value="{% if form.initial.update_price %}1{% endif %}">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-5">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-check-lg"></i> Registrar Transacción
+        </button>
+    </div>
+
+</form>
+
+<!-- MODAL FOR ADD/EDIT -->
+<div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Agregar Ítem</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Buscar Artículo</label>
+                    <input type="text" class="form-control mb-2" id="modal-search" placeholder="Filtrar...">
+                    <select class="form-select" id="modal-articulo" size="5">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" class="form-control" id="modal-cantidad" step="0.01">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Precio Unitario</label>
+                        <input type="number" class="form-control" id="modal-precio" step="0.01">
+                    </div>
+                </div>
+                <div class="mt-3 form-check">
+                    <input class="form-check-input" type="checkbox" id="modal-update-ref">
+                    <label class="form-check-label" for="modal-update-ref">Actualizar Precio Referencia</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-save-modal">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HIDDEN TEMPLATE FOR NEW ROW -->
+<div id="empty-form-template" style="display:none;">
+    <div class="hidden-row" data-index="__prefix__">
+        {{ formset.empty_form.id }}
+        {{ formset.empty_form.articulo }}
+        {{ formset.empty_form.cantidad }}
+        {{ formset.empty_form.precio_unitario }}
+        <input type="checkbox" name="{{ formset.empty_form.prefix }}-DELETE">
+        <input type="hidden" name="{{ formset.empty_form.prefix }}-update_price">
+    </div>
+</div>
+
+<!-- Source Options for Select (Hidden) -->
+<select id="source-options" style="display:none;">
+    <!-- We clone these options to the modal -->
+    {% for choice in formset.empty_form.articulo.field.queryset %}
+    <option value="{{ choice.pk }}">{{ choice }}</option>
+    {% endfor %}
+</select>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // --- DATA ---
+        const preciosRef = JSON.parse('{{ precios_json|escapejs }}');
+
+        // --- DOM ELEMENTS ---
+        const formsetContainer = document.getElementById('formset-rows');
+        const visualTableBody = document.getElementById('visible-table-body');
+        // Use a generic selector for TOTAL_FORMS as prefix might vary (e.g. 'detalles' vs 'detalletransaccion_set')
+        const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+        const emptyTemplateHtml = document.getElementById('empty-form-template').innerHTML;
+        const emptyState = document.getElementById('empty-state');
+
+        const modalEl = document.getElementById('itemModal');
+        const modal = new bootstrap.Modal(modalEl);
+        const modalTitle = document.getElementById('modalTitle');
+        const modalSearch = document.getElementById('modal-search');
+        const modalSelect = document.getElementById('modal-articulo');
+        const modalQty = document.getElementById('modal-cantidad');
+        const modalPrice = document.getElementById('modal-precio');
+        const modalUpdateCheck = document.getElementById('modal-update-ref');
+        const btnSaveModal = document.getElementById('btn-save-modal');
+
+        let editingIndex = null; // null = creating
+
+        // --- INIT ---
+        // Populate Modal Select
+        const sourceSelect = document.getElementById('source-options');
+        modalSelect.innerHTML = sourceSelect.innerHTML;
+
+        // Render Initial Rows (if any exist from server errors)
+        refreshVisualTable();
+
+        // --- MODAL LOGIC ---
+        document.getElementById('btn-open-modal').addEventListener('click', () => {
+            openModal();
+        });
+
+        function openModal(index = null) {
+            editingIndex = index;
+            modalSearch.value = '';
+            filterOptions('');
+
+            if (index !== null) {
+                // EDIT
+                modalTitle.innerText = "Editar Ítem";
+                const rowBlock = formsetContainer.querySelector(`.hidden-row[data-index='${index}']`);
+
+                modalSelect.value = rowBlock.querySelector(`select[name$='articulo']`).value;
+                modalQty.value = rowBlock.querySelector(`input[name$='cantidad']`).value;
+                modalPrice.value = rowBlock.querySelector(`input[name$='precio_unitario']`).value;
+
+                const upRef = rowBlock.querySelector(`input[name$='update_price']`);
+                modalUpdateCheck.checked = (upRef && upRef.value === '1');
+            } else {
+                // NEW
+                modalTitle.innerText = "Agregar Ítem";
+                modalSelect.selectedIndex = -1;
+                modalQty.value = '';
+                modalPrice.value = '';
+                modalUpdateCheck.checked = false;
+            }
+            modal.show();
+        }
+
+        // Filter
+        modalSearch.addEventListener('input', (e) => filterOptions(e.target.value.toLowerCase()));
+
+        function filterOptions(term) {
+            for (let opt of modalSelect.options) {
+                const text = opt.text.toLowerCase();
+                opt.hidden = !text.includes(term);
+            }
+        }
+
+        // Auto Price
+        modalSelect.addEventListener('change', () => {
+            const pid = modalSelect.value;
+            if (preciosRef[pid] && !editingIndex && !modalPrice.value) {
+                // Only auto-fill if creating and empty, or force?
+                // User said "automaticamente agregar ese precio"
+                modalPrice.value = preciosRef[pid];
+            } else if (preciosRef[pid] && !modalPrice.value) {
+                modalPrice.value = preciosRef[pid];
+            }
+        });
+
+        // Save
+        btnSaveModal.addEventListener('click', () => {
+            if (!modalSelect.value) { alert("Seleccione un artículo"); return; }
+            if (!modalQty.value || modalQty.value <= 0) { alert("Cantidad inválida"); return; }
+
+            if (editingIndex !== null) {
+                // UPDATE EXISTING
+                updateHiddenRow(editingIndex);
+            } else {
+                // CREATE NEW
+                createHiddenRow();
+            }
+
+            refreshVisualTable();
+            modal.hide();
+        });
+
+        function createHiddenRow() {
+            const index = parseInt(totalFormsInput.value); // Next index
+            const newHtml = emptyTemplateHtml.replace(/__prefix__/g, index);
+            formsetContainer.insertAdjacentHTML('beforeend', newHtml);
+
+            const newRow = formsetContainer.lastElementChild; // The div inside #formset-rows
+            // Fix index in attributes just in case insertAdjacentHTML messing structure? No.
+            // But verify inserted element is indeed the one with data-index=index
+
+            totalFormsInput.value = index + 1;
+
+            // Populate values
+            fillRowData(newRow);
+        }
+
+        function updateHiddenRow(index) {
+            const row = formsetContainer.querySelector(`.hidden-row[data-index='${index}']`);
+            fillRowData(row);
+        }
+
+        function fillRowData(row) {
+            row.querySelector(`select[name$='articulo']`).value = modalSelect.value;
+            row.querySelector(`input[name$='cantidad']`).value = modalQty.value;
+            row.querySelector(`input[name$='precio_unitario']`).value = modalPrice.value;
+
+            const upRefInput = row.querySelector(`input[name$='update_price']`);
+            upRefInput.value = modalUpdateCheck.checked ? '1' : '';
+        }
+
+        // --- VISUAL TABLE SYNC ---
+        function refreshVisualTable() {
+            visualTableBody.innerHTML = '';
+            let visibleCount = 0;
+
+            const rows = formsetContainer.querySelectorAll('.hidden-row');
+            rows.forEach(row => {
+                const index = row.getAttribute('data-index');
+                const delCheckbox = row.querySelector(`input[name$='DELETE']`);
+
+                // If deleted, skip visual
+                if (delCheckbox && delCheckbox.checked) return;
+
+                // Values
+                const artSelect = row.querySelector(`select[name$='articulo']`);
+                const artName = artSelect.options[artSelect.selectedIndex]?.text || "Seleccione...";
+                const qty = parseFloat(row.querySelector(`input[name$='cantidad']`).value) || 0;
+                const prc = parseFloat(row.querySelector(`input[name$='precio_unitario']`).value) || 0;
+                const sub = (qty * prc).toFixed(2);
+
+                const upRef = row.querySelector(`input[name$='update_price']`).value === '1';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${artName}</td>
+                    <td>${qty}</td>
+                    <td>$${prc}</td>
+                    <td>$${sub}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editRow(${index})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteRow(${index})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        ${upRef ? '<i class="bi bi-floppy-fill text-info ms-2" title="Actualiza precio base"></i>' : ''}
+                    </td>
+                `;
+                visualTableBody.appendChild(tr);
+                visibleCount++;
+            });
+
+            if (visibleCount === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+            }
+        }
+
+        // Expose global helpers for onclick
+        window.editRow = function (index) {
+            openModal(index);
+        };
+
+        window.deleteRow = function (index) {
+            if (!confirm("¿Eliminar ítem?")) return;
+            const row = formsetContainer.querySelector(`.hidden-row[data-index='${index}']`);
+            const delCheckbox = row.querySelector(`input[name$='DELETE']`);
+            if (delCheckbox) {
+                delCheckbox.checked = true;
+                refreshVisualTable();
+            }
+        };
+
+    });
+</script>
+{% endblock %}

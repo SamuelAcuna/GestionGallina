@@ -1,0 +1,123 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}Dashboard - SGA{% endblock %}
+
+{% block content %}
+<div
+    class="page-header d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+</div>
+
+<div class="row ">
+    <div class="col-md-12">
+        <h4>Accesos Rápidos</h4>
+        <div class="d-flex gap-2">
+            <a href="{% url 'lote-list' %}" class="btn btn-outline-primary"><i class="bi bi-plus-circle"></i> Gestionar
+                Lotes</a>
+            <a href="{% url 'articulo-list' %}" class="btn btn-outline-secondary"><i class="bi bi-box"></i> Ver
+                Inventario</a>
+            <a href="{% url 'transaccion-list' %}" class="btn btn-outline-success"><i class="bi bi-cart"></i> Nueva
+                Venta/Compra</a>
+            <a href="{% url 'kiosco-index' %}" class="btn btn-warning text-dark"><i class="bi bi-phone"></i> Modo
+                Kiosco</a>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Active Lots Card -->
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title"> <i class="bi bi-egg-fill"></i> Lotes Activos</h5>
+                <h2 class="display-4">{{ lotes_activos }}</h2>
+                <p class="card-text">Lotes en producción actualmente.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Birds Card -->
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-heart-pulse"></i> Aves Totales</h5>
+                <h2 class="display-4">{{ total_aves }}</h2>
+                <p class="card-text">Población total en granja.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Alerts Card -->
+    <div class="col-md-4">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-exclamation-triangle"></i> Alertas Stock</h5>
+                {% if alertas_stock %}
+                <ul class="list-unstyled">
+                    {% for articulo in alertas_stock %}
+                    <li><strong>{{ articulo.nombre }}</strong>: {{ articulo.stock_actual }} {{ articulo.unidad_medida }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="card-text display-6"><i class="bi bi-check-circle"></i> OK</p>
+                <p>Inventario bajo control.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Lote Status Section -->
+<div class="row mt-4">
+    <div class="col-md-12 mb-3">
+        <h4><i class="bi bi-list-check"></i> Estado Diario de Lotes</h4>
+    </div>
+    {% for item in lotes_status %}
+    <div class="col-md-4 mb-3">
+        <div
+            class="card h-100 {% if item.alimentado_hoy %}bg-success text-white{% else %}bg-warning text-dark{% endif %} shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center bg-transparent border-bottom-0">
+                <h5 class="mb-0">{{ item.lote.galpon.nombre }}</h5>
+                <span class="badge bg-light text-dark">Lote #{{ item.lote.pk }}</span>
+            </div>
+            <div class="card-body">
+                <p class="card-text mb-1"><i class="bi bi-heart-pulse"></i> Aves: <strong>{{ item.lote.aves_actuales }}</strong></p>
+
+                {% if item.alimentado_hoy %}
+                <h3 class="mt-3"><i class="bi bi-check-circle-fill"></i> Alimentado</h3>
+                <ul class="list-unstyled mb-0 mt-2">
+                    {% for det in item.detalles %}
+                    <li class="border-bottom pb-1 mb-1">
+                        <i class="bi bi-clock"></i> {{ det.hora|date:"H:i" }} hrs —
+                        <strong>{{ det.cantidad }} {{ det.unidad }}</strong> ({{ det.nombre }})
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <h3 class="mt-3"><i class="bi bi-exclamation-circle"></i> Pendiente</h3>
+                <p class="mb-0">Aún no se ha registrado consumo hoy.</p>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-transparent border-top-0 d-flex justify-content-end">
+                {% if not item.alimentado_hoy %}
+                <a href="{% url 'kiosco-consumo' item.lote.pk %}" class="btn btn-sm btn-light text-dark fw-bold me-2">
+                    <i class="bi bi-basket"></i> Alimentar
+                </a>
+                {% endif %}
+                <a href="{% url 'lote-detail' item.lote.pk %}" class="btn btn-sm btn-light text-dark">
+                    <i class="bi bi-eye"></i> Ver
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">No hay lotes activos.</div>
+    </div>
+    {% endfor %}
+</div>
+
+
+{% endblock %}

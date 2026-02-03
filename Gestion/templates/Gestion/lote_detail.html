@@ -1,0 +1,190 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}Detalle Lote #{{ lote.pk }} - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Lote #{{ lote.pk }} - {{ lote.galpon.nombre }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0 gap-2">
+        {% if lote.estado %}
+        <a href="{% url 'registro-bajas-create' %}?lote_id={{ lote.pk }}" class="btn btn-sm btn-danger">
+            <i class="bi bi-activity"></i> Registrar Baja
+        </a>
+        <a href="{% url 'movimiento-interno-create' %}?lote_id={{ lote.pk }}" class="btn btn-sm btn-warning text-dark">
+            <i class="bi bi-arrow-left-right"></i> Registrar Movimiento
+        </a>
+        <a href="{% url 'registro-vacunacion-create' %}?lote_id={{ lote.pk }}" class="btn btn-sm btn-info text-dark">
+            <i class="bi bi-eyedropper"></i> Registrar Vacuna
+        </a>
+        {% endif %}
+        <a href="{% url 'lote-list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+</div>
+
+<!-- Info Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <h6 class="card-subtitle mb-2 text-muted">Aves Actuales</h6>
+                <h2 class="card-title text-primary">{{ lote.aves_actuales }}</h2>
+                <small>De {{ lote.aves_iniciales }} iniciales</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-subtitle mb-2 text-muted">Raza</h6>
+                <h4>{{ lote.raza }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-subtitle mb-2 text-muted">Fecha Inicio</h6>
+                <h5>{{ lote.fecha_inicio|date:"d/m/Y" }}</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-subtitle mb-2 text-muted">Estado</h6>
+                <h5>
+                    {% if lote.estado %}
+                    <span class="badge bg-success">ACTIVO</span>
+                    {% else %}
+                    <span class="badge bg-secondary">CERRADO</span>
+                    {% endif %}
+                </h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card {% if lote.fecha_proxima_vacuna %}border-warning{% endif %}">
+            <div class="card-body text-center">
+                <h6 class="card-subtitle mb-2 text-muted">Próxima Vacuna</h6>
+                <h5>
+                    {% if lote.fecha_proxima_vacuna %}
+                    {{ lote.fecha_proxima_vacuna|date:"d/m/Y" }}
+                    {% else %}
+                    -
+                    {% endif %}
+                </h5>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Registry Bajas -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header bg-danger text-white">
+                Historial de Bajas
+            </div>
+            <div class="card-body p-0 table-responsive" style="max-height: 300px;">
+                <table class="table table-sm table-striped m-0">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Cant.</th>
+                            <th>Motivo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for baja in bajas %}
+                        <tr>
+                            <td>{{ baja.fecha|date:"d/m/y H:i" }}</td>
+                            <td class="text-danger fw-bold">-{{ baja.cantidad }}</td>
+                            <td>{{ baja.get_motivo_display }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center p-3">Sin registros.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Movimientos Internos -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header bg-warning text-dark">
+                Movimientos
+            </div>
+            <div class="card-body p-0 table-responsive" style="max-height: 300px;">
+                <table class="table table-sm table-striped m-0">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mov in movimientos %}
+                        <tr>
+                            <td>{{ mov.fecha|date:"d/m" }}</td>
+                            <td>
+                                {% if mov.tipo_movimiento == 'CONSUMO' %}
+                                <span class="badge bg-secondary">Uso</span>
+                                {% else %}
+                                <span class="badge bg-success">Prod</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ mov.cantidad }} {{ mov.articulo.unidad_medida }} <small
+                                    class="text-muted">{{ mov.articulo.nombre }}</small></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center p-3">Sin movimientos.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vaccinations -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header bg-info text-dark">
+                Vacunaciones
+            </div>
+            <div class="card-body p-0 table-responsive" style="max-height: 300px;">
+                <table class="table table-sm table-striped m-0">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Vacuna</th>
+                            <th>Próx.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vac in vacunaciones %}
+                        <tr>
+                            <td>{{ vac.fecha|date:"d/m/y" }}</td>
+                            <td>{{ vac.nombre_vacuna }}</td>
+                            <td>{{ vac.proxima_fecha_sugerida|date:"d/m"|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center p-3">Sin vacunaciones.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
