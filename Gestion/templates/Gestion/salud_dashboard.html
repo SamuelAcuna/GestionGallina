@@ -1,0 +1,140 @@
+{% extends 'Gestion/base.html' %}
+{% load humanize %}
+
+{% block title %}Tablero de Salud - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Tablero de Salud y Rendimiento</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <form class="d-flex align-items-center gap-2" method="get">
+            <select name="lote" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">Todos los Lotes</option>
+                {% for l in lotes %}
+                <option value="{{ l.pk }}" {% if selected_lote.pk == l.pk %}selected{% endif %}>
+                    {{ l.galpon.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <select name="dias" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="7" {% if periodo == 7 %}selected{% endif %}>Últimos 7 días</option>
+                <option value="30" {% if periodo == 30 %}selected{% endif %}>Últimos 30 días</option>
+                <option value="60" {% if periodo == 60 %}selected{% endif %}>Últimos 60 días</option>
+                <option value="90" {% if periodo == 90 %}selected{% endif %}>Últimos 90 días</option>
+            </select>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Chart 1: Laying Rate -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-graph-up"></i> Tasa de Puesta (%)</h5>
+                <small class="text-muted">Prod. Huevos / Aves Vivas</small>
+            </div>
+            <div class="card-body">
+                <canvas id="chartPuesta"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 2: Feed Consumption -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold text-success"><i class="bi bi-basket"></i> Consumo por Ave (g)</h5>
+                <small class="text-muted">Alimento / Aves Vivas</small>
+            </div>
+            <div class="card-body">
+                <canvas id="chartConsumo"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 3: Efficiency -->
+    <div class="col-12 mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3 border-bottom-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-speedometer2 text-warning"></i> Eficiencia
+                            Alimenticia</h5>
+                        <small class="text-muted">Gramos de Alimento por Huevo Producido (Menor es mejor)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body pt-0">
+                <canvas id="chartEficiencia" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="alert alert-light border shadow-sm">
+            <i class="bi bi-info-circle-fill text-primary me-2"></i>
+            <strong>Nota:</strong> Las métricas se calculan diariamente. La eficiencia indica cuánto alimento se
+            invirtió para producir un huevo.
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const labels = {{ chart_labels| safe }};
+    const dataPuesta = {{ datasets_puesta| safe }};
+    const dataConsumo = {{ datasets_consumo| safe }};
+    const dataFCR = {{ datasets_fcr| safe }};
+
+    const commonOptions = {
+        responsive: true,
+        plugins: {
+            legend: { position: 'top', align: 'end', labels: { boxWidth: 12, usePointStyle: true } },
+            tooltip: {
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                titleColor: '#333',
+                bodyColor: '#666',
+                borderColor: '#ddd',
+                borderWidth: 1,
+                padding: 10,
+                displayColors: true
+            }
+        },
+        scales: {
+            x: { grid: { display: false } },
+            y: { grid: { borderDash: [2, 4], color: '#f0f0f0' }, beginAtZero: true }
+        }
+    };
+
+    // Chart 1: Puesta
+    new Chart(document.getElementById('chartPuesta'), {
+        type: 'line',
+        data: { labels: labels, datasets: dataPuesta },
+        options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: { display: true, text: '%' } } } }
+    });
+
+    // Chart 2: Consumo
+    new Chart(document.getElementById('chartConsumo'), {
+        type: 'line',
+        data: { labels: labels, datasets: dataConsumo },
+        options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: { display: true, text: 'Gramos' } } } }
+    });
+
+    // Chart 3: Eficiencia (Area)
+    new Chart(document.getElementById('chartEficiencia'), {
+        type: 'line',
+        data: { labels: labels, datasets: dataFCR },
+        options: {
+            ...commonOptions,
+            elements: { line: { tension: 0.4 } },
+            scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, title: { display: true, text: 'g / huevo' } } }
+        }
+    });
+</script>
+{% endblock %}

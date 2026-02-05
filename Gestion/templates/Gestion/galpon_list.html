@@ -1,4 +1,5 @@
 {% extends 'Gestion/base.html' %}
+{% load gestion_extras %}
 
 {% block title %}Galpones - SGA{% endblock %}
 
@@ -16,8 +17,8 @@
     <table class="table table-striped table-hover">
         <thead>
             <tr>
-                <th>Nombre</th>
-                <th>Capacidad Máxima</th>
+                <th>{% sort_header 'Nombre' 'nombre' %}</th>
+                <th>{% sort_header 'Capacidad Máxima' 'capacidad_max' %}</th>
                 <th>Acciones</th>
             </tr>
         </thead>

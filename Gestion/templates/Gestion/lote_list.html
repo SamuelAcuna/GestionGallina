@@ -1,4 +1,5 @@
 {% extends 'Gestion/base.html' %}
+{% load gestion_extras %}
 
 {% block title %}Lotes - SGA{% endblock %}
 
@@ -17,12 +18,12 @@
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Galpón</th>
-                <th>Raza</th>
-                <th>Aves Iniciales</th>
-                <th>Aves Actuales</th>
-                <th>Fecha Inicio</th>
-                <th>Estado</th>
+                <th>{% sort_header 'Galpón' 'galpon__nombre' %}</th>
+                <th>{% sort_header 'Raza' 'raza' %}</th>
+                <th>{% sort_header 'Aves Iniciales' 'aves_iniciales' %}</th>
+                <th>{% sort_header 'Aves Actuales' 'aves_actuales' %}</th>
+                <th>{% sort_header 'Fecha Inicio' 'fecha_inicio' %}</th>
+                <th>{% sort_header 'Estado' 'estado' %}</th>
                 <th>Acciones</th>
             </tr>
         </thead>

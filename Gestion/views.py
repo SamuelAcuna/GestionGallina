@@ -12,6 +12,7 @@ from .forms import (
     EntidadForm, CabeceraTransaccionForm, DetalleTransaccionFormSet, RegistroVacunacionForm, RecetaForm,
     CabeceraTransaccionSimpleForm
 )
+from .utils import get_ordering
 
 def index(request):
     """Dashboard View"""
@@ -67,6 +68,12 @@ def articulo_list(request):
     
     # Dynamic Filter Options
     available_types = Articulo.objects.values_list('tipo', flat=True).distinct().order_by('tipo')
+
+    # Sorting
+    allowed_sort = ['nombre', 'tipo', 'unidad_medida', 'precio_referencia', 'stock_actual', 'stock_minimo']
+    ordering = get_ordering(request, allowed_sort, default_field='nombre')
+    articulos = articulos.order_by(ordering)
+
 
     if query:
         articulos = articulos.filter(nombre__icontains=query)
@@ -185,6 +192,13 @@ def receta_delete(request, pk):
 
 def galpon_list(request):
     galpones = Galpon.objects.all()
+    
+    # Sorting
+    allowed_sort = ['nombre', 'capacidad_max']
+    ordering = get_ordering(request, ['nombre', 'capacidad_max', 'pk'], default_field='nombre')
+    
+    galpones = galpones.order_by(ordering)
+    
     return render(request, 'Gestion/galpon_list.html', {'galpones': galpones})
 
 def galpon_create(request):
@@ -221,7 +235,20 @@ def galpon_delete(request, pk):
 # --- BIOLOGICAL CYCLE ---
 
 def lote_list(request):
-    lotes = Lote.objects.all().order_by('-estado', 'galpon__nombre')
+    lotes = Lote.objects.all()
+
+    # Sorting
+    allowed_sort = ['galpon__nombre', 'raza', 'aves_iniciales', 'aves_actuales', 'fecha_inicio', 'estado']
+    ordering = get_ordering(request, allowed_sort, default_field='-estado') 
+    # default was -estado, galpon__nombre. Can't easy support multi-col default with single string helper, 
+    # but let's stick to simple sort or modify helper if needed. 
+    # Code had .order_by('-estado', 'galpon__nombre').
+    
+    if not request.GET.get('sort'):
+        lotes = lotes.order_by('-estado', 'galpon__nombre')
+    else:
+        lotes = lotes.order_by(ordering)
+        
     return render(request, 'Gestion/lote_list.html', {'lotes': lotes})
 
 def lote_create(request):
@@ -342,7 +369,13 @@ def entidad_list(request):
     query = request.GET.get('q', '')
     rol_filter = request.GET.get('rol', '')
     
-    entidades = Entidad.objects.all().order_by('nombre_razon_social')
+    entidades = Entidad.objects.all()
+
+    # Sorting
+    allowed_sort = ['nombre_razon_social', 'rut', 'telefono', 'email']
+    ordering = get_ordering(request, allowed_sort, default_field='nombre_razon_social')
+    entidades = entidades.order_by(ordering)
+
     
     if query:
         entidades = entidades.filter(
@@ -400,7 +433,10 @@ def transaccion_list(request):
     status_filter = request.GET.get('status', '')
     entidad_query = request.GET.get('entidad', '')
 
-    transacciones = CabeceraTransaccion.objects.all().order_by('-fecha')
+    entidad_query = request.GET.get('entidad', '')
+
+    transacciones = CabeceraTransaccion.objects.all()
+
     
     # Dynamic Filter Options
     available_types = CabeceraTransaccion.objects.values_list('tipo_operacion', flat=True).distinct().order_by('tipo_operacion')
@@ -419,6 +455,12 @@ def transaccion_list(request):
     
     if entidad_query:
         transacciones = transacciones.filter(entidad__nombre_razon_social__icontains=entidad_query)
+
+    # Sorting
+    allowed_sort = ['fecha', 'tipo_operacion', 'entidad__nombre_razon_social', 'monto_total', 'estado_pago']
+    ordering = get_ordering(request, allowed_sort, default_field='-fecha')
+    transacciones = transacciones.order_by(ordering)
+
 
     paginator = Paginator(transacciones, 10)
     page_number = request.GET.get('page')
@@ -680,7 +722,7 @@ def auditoria_dashboard(request):
         fecha__year=year,
         fecha__month=month
     ).exclude(estado_pago='ANULADO').order_by('-fecha')
-    
+    transacciones = transacciones.all().order_by('-pk')
     # Aggregates
     ventas = transacciones.filter(tipo_operacion=TipoOperacion.VENTA).aggregate(Sum('monto_total'))['monto_total__sum'] or 0
     compras = transacciones.filter(tipo_operacion=TipoOperacion.COMPRA).aggregate(Sum('monto_total'))['monto_total__sum'] or 0
@@ -698,3 +740,118 @@ def auditoria_dashboard(request):
         'years': range(today.year - 2, today.year + 2),
     }
     return render(request, 'Gestion/auditoria_dashboard.html', context)
+
+def salud_dashboard(request):
+    """Health & Performance Dashboard"""
+    import json
+    
+    # Filter controls
+    periodo_dias = int(request.GET.get('dias', 30))
+    lote_id = request.GET.get('lote')
+    
+    end_date = timezone.now().date()
+    start_date = end_date - timezone.timedelta(days=periodo_dias)
+    
+    # Get active lotes (or specific one)
+    lotes_qs = Lote.objects.filter(estado=True)
+    if lote_id:
+        selected_lote = get_object_or_404(Lote, pk=lote_id)
+        # Keep queryset for dropdown, but filtering logic changes
+        target_lotes = [selected_lote]
+    else:
+        selected_lote = None
+        target_lotes = list(lotes_qs)
+        
+    # Prepare Data Structures
+    dates = [start_date + timezone.timedelta(days=x) for x in range((end_date - start_date).days + 1)]
+    chart_labels = [d.strftime("%d/%m") for d in dates]
+    
+    datasets_puesta = []
+    datasets_consumo = []
+    datasets_mortalidad = []
+    datasets_fcr = [] # Feed Conversion Ratio proxy
+    
+    colores = [
+        'rgba(255, 99, 132, 1)',
+        'rgba(54, 162, 235, 1)',
+        'rgba(255, 206, 86, 1)',
+        'rgba(75, 192, 192, 1)',
+        'rgba(153, 102, 255, 1)',
+        'rgba(255, 159, 64, 1)'
+    ]
+    
+    for idx, lote in enumerate(target_lotes):
+        data_puesta = []
+        data_consumo = []
+        data_mortalidad = []
+        data_fcr = []
+        
+        # Pre-fetch all relevant data to minimize queries in loop
+        movs = MovimientoInterno.objects.filter(lote=lote, fecha__date__range=[start_date, end_date])
+        bajas = RegistroBajas.objects.filter(lote=lote, fecha__date__lte=end_date) 
+        
+        current_color = colores[idx % len(colores)]
+        
+        for d in dates:
+            # 1. Birds Alive Calculation
+            bajas_acum = bajas.filter(fecha__date__lte=d).aggregate(total=Sum('cantidad'))['total'] or 0
+            aves_vivas = lote.aves_iniciales - bajas_acum
+            if aves_vivas <= 0: aves_vivas = 1 
+                
+            # 2. Daily Production & Consumption
+            daily_prod = movs.filter(fecha__date=d, tipo_movimiento=TipoMovimiento.PRODUCCION).aggregate(t=Sum('cantidad'))['t'] or 0
+            daily_cons = movs.filter(fecha__date=d, tipo_movimiento=TipoMovimiento.CONSUMO).aggregate(t=Sum('cantidad'))['t'] or 0
+            daily_fallecidos = bajas.filter(fecha__date=d).aggregate(t=Sum('cantidad'))['t'] or 0
+            
+            # 3. Metrics
+            tasa_puesta = float(daily_prod / aves_vivas) * 100
+            consumo_ave = float(daily_cons / aves_vivas) * 1000 
+            
+            # Efficiency: Grams of feed per egg
+            if daily_prod > 0:
+                g_per_egg = (float(daily_cons) * 1000) / float(daily_prod)
+            else:
+                g_per_egg = 0
+            
+            data_puesta.append(round(tasa_puesta, 1))
+            data_consumo.append(round(consumo_ave, 1))
+            data_mortalidad.append(int(daily_fallecidos))
+            data_fcr.append(round(g_per_egg, 1))
+
+        datasets_puesta.append({
+            'label': f"{lote.galpon.nombre} ({lote.raza})",
+            'data': data_puesta,
+            'borderColor': current_color,
+            'tension': 0.3,
+            'fill': False
+        })
+        
+        datasets_consumo.append({
+            'label': f"{lote.galpon.nombre}",
+            'data': data_consumo,
+            'borderColor': current_color,
+            'borderDash': [5, 5],
+            'tension': 0.3,
+            'fill': False
+        })
+        
+        datasets_fcr.append({
+            'label': f"Eficiencia {lote.galpon.nombre}",
+            'data': data_fcr,
+            'borderColor': current_color,
+            'backgroundColor': current_color.replace('1)', '0.1)'), # Transparent fill
+            'tension': 0.4, # Smooth curves
+            'fill': True # Area chart
+        })
+
+    context = {
+        'lotes': lotes_qs,
+        'selected_lote': selected_lote,
+        'periodo': periodo_dias,
+        'chart_labels': json.dumps(chart_labels),
+        'datasets_puesta': json.dumps(datasets_puesta),
+        'datasets_consumo': json.dumps(datasets_consumo),
+        'datasets_fcr': json.dumps(datasets_fcr),
+    }
+
+    return render(request, 'Gestion/salud_dashboard.html', context)

@@ -70,6 +70,12 @@
                                 <i class="bi bi-graph-up-arrow me-2"></i> Auditoría
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'salud-dashboard' %}active{% endif %}"
+                                href="{% url 'salud-dashboard' %}">
+                                <i class="bi bi-activity me-2"></i> Rendimiento y salud
+                            </a>
+                        </li>
 
                         <h6
                             class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">

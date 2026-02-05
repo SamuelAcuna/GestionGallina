@@ -1,5 +1,6 @@
 {% extends 'Gestion/base.html' %}
 {% load humanize %}
+{% load gestion_extras %}
 
 {% block title %}Inventario - SGA{% endblock %}
 
@@ -28,13 +29,13 @@
     <table class="table table-striped table-hover">
         <thead>
             <tr>
-                <th>Nombre</th>
-                <th>Tipo</th>
-                <th>Unidad</th>
-                <th>Precio Referencial</th>
-                <th>Control Stock</th>
-                <th>Stock Actual</th>
-                <th>Stock Mínimo</th>
+                <th>{% sort_header 'Nombre' 'nombre' %}</th>
+                <th>{% sort_header 'Tipo' 'tipo' %}</th>
+                <th>{% sort_header 'Unidad' 'unidad_medida' %}</th>
+                <th>{% sort_header 'Precio Ref.' 'precio_referencia' %}</th>
+                <th class="text-center">Control Stock</th>
+                <th>{% sort_header 'Stock Actual' 'stock_actual' %}</th>
+                <th>{% sort_header 'Stock Mín.' 'stock_minimo' %}</th>
                 <th>Acciones</th>
             </tr>
         </thead>
