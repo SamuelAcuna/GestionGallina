@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'Gestion',
     'Kiosco',
 ]
@@ -111,6 +112,16 @@ TIME_ZONE = 'America/Santiago'
 USE_I18N = True
 
 USE_TZ = True
+
+# Currency / Number Formatting
+USE_THOUSAND_SEPARATOR = True
+NUMBER_GROUPING = 3
+THOUSAND_SEPARATOR = '.'
+DECIMAL_SEPARATOR = ','
+
+FORMAT_MODULE_PATH = [
+    'Gestion.formats',
+]
 
 
 # Static files (CSS, JavaScript, Images)

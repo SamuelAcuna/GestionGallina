@@ -1,0 +1,69 @@
+{% extends 'Gestion/base.html' %}
+
+{% block title %}{{ title }} - SGA{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ title }}</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Entidad / Proveedor</label>
+                            {{ form.entidad }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha</label>
+                            {{ form.fecha }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">N° Documento</label>
+                            {{ form.numero_documento }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Monto Total ($)</label>
+                            {{ form.monto_total }}
+                            <div class="form-text">Ingrese el monto total pagado.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Estado de Pago</label>
+                            {{ form.estado_pago }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Método de Pago</label>
+                            {{ form.metodo_pago }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Observaciones / Detalle del Gasto</label>
+                            {{ form.observaciones }}
+                            <div class="form-text">Describa brevemente qué items o servicios incluye este gasto.</div>
+                        </div>
+                    </div>
+
+                    {{ form.tipo_operacion }}
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'transaccion-list' %}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">Registrar Gasto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

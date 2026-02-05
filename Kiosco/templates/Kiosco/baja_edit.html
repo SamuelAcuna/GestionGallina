@@ -1,0 +1,40 @@
+{% extends 'Kiosco/base_kiosco.html' %}
+
+{% block content %}
+<h3 class="text-center mb-4">Editar Baja - {{ lote.galpon.nombre }}</h3>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card p-4 shadow-sm border-0" style="border-radius: 15px;">
+            <p><strong>Hora:</strong> {{ baja.fecha|date:"H:i" }}</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="form-label h5">Motivo</label>
+                    <select name="motivo" class="form-select form-select-lg" required>
+                        <option value="MUERTE_NATURAL" {% if baja.motivo=='MUERTE_NATURAL' %}selected{% endif %}>Muerte
+                            Natural</option>
+                        <option value="ACCIDENTE" {% if baja.motivo=='ACCIDENTE' %}selected{% endif %}>Accidente
+                        </option>
+                        <option value="DESCARTE" {% if baja.motivo=='DESCARTE' %}selected{% endif %}>Descarte</option>
+                        <option value="DEPREDADOR" {% if baja.motivo=='DEPREDADOR' %}selected{% endif %}>Depredador
+                        </option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label h5">Cantidad</label>
+                    <input type="number" name="cantidad" value="{{ baja.cantidad }}"
+                        class="form-control form-control-lg" required>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg fw-bold">Guardar Cambios</button>
+                    <a href="{% url 'kiosco-menu' lote.pk %}" class="btn btn-outline-secondary btn-lg">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

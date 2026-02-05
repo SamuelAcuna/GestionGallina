@@ -4,31 +4,33 @@ from django.db import models
 from django.db.models import Sum
 from django.utils import timezone
 import datetime
+from django.core.paginator import Paginator
+from django.db.models import Q
 from .models import Articulo, Galpon, Lote, RegistroBajas, MovimientoInterno, Entidad, CabeceraTransaccion, RegistroVacunacion, TipoMovimiento, Receta, DetalleTransaccion, TipoOperacion
 from .forms import (
     ArticuloForm, GalponForm, LoteForm, RegistroBajasForm, MovimientoInternoForm,
-    EntidadForm, CabeceraTransaccionForm, DetalleTransaccionFormSet, RegistroVacunacionForm, RecetaForm
+    EntidadForm, CabeceraTransaccionForm, DetalleTransaccionFormSet, RegistroVacunacionForm, RecetaForm,
+    CabeceraTransaccionSimpleForm
 )
 
 def index(request):
     """Dashboard View"""
+    
     total_aves = Lote.objects.filter(estado=True).aggregate(Sum('aves_actuales'))['aves_actuales__sum'] or 0
     # Lote Status Logic
     lotes_activos = Lote.objects.filter(estado=True).count()
     alertas_stock = Articulo.objects.filter(controlar_stock=True, stock_actual__lte=models.F('stock_minimo'))
     
     lotes = Lote.objects.filter(estado=True).order_by('galpon__nombre')
-    today = timezone.now().date()
-    start_of_day = timezone.make_aware(datetime.datetime.combine(today, datetime.time.min))
-    end_of_day = timezone.make_aware(datetime.datetime.combine(today, datetime.time.max))
-
+    today =  timezone.localdate()
+    
     lotes_status = []
     for lote in lotes:
         # Get ALL feed consumption for today
         consumos_hoy = MovimientoInterno.objects.filter(
             lote=lote, 
             tipo_movimiento=TipoMovimiento.CONSUMO,
-            fecha__range=(start_of_day, end_of_day)
+            fecha__date=today
         ).order_by('fecha')
         
         alimentado = consumos_hoy.exists()
@@ -58,8 +60,31 @@ def index(request):
 # --- ARTICULOS ---
 
 def articulo_list(request):
-    articulos = Articulo.objects.all()
-    return render(request, 'Gestion/articulo_list.html', {'articulos': articulos})
+    query = request.GET.get('q', '')
+    tipo_filter = request.GET.get('tipo', '')
+    
+    articulos = Articulo.objects.all().order_by('nombre')
+    
+    # Dynamic Filter Options
+    available_types = Articulo.objects.values_list('tipo', flat=True).distinct().order_by('tipo')
+
+    if query:
+        articulos = articulos.filter(nombre__icontains=query)
+    
+    if tipo_filter:
+        articulos = articulos.filter(tipo=tipo_filter)
+    
+    paginator = Paginator(articulos, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'Gestion/articulo_list.html', {
+        'articulos': page_obj, 
+        'page_obj': page_obj, 
+        'is_paginated': page_obj.has_other_pages(),
+        'paginator': paginator,
+        'available_types': available_types
+    })
 
 def articulo_create(request):
     if request.method == 'POST':
@@ -239,7 +264,7 @@ def lote_overview(request):
     lotes = Lote.objects.filter(estado=True).order_by('galpon__nombre')
     
     # Range of last 5 days
-    today = timezone.now().date()
+    today = timezone.localdate()
     dates = [today - timezone.timedelta(days=i) for i in range(5)]
     
     lote_data = []
@@ -248,7 +273,7 @@ def lote_overview(request):
         daily_stats = []
         for d in dates:
             # Filter movements for this day/lote
-            movs = MovimientoInterno.objects.filter(lote=lote, fecha=d)
+            movs = MovimientoInterno.objects.filter(lote=lote, fecha__date=d)
             
             produccion = movs.filter(tipo_movimiento=TipoMovimiento.PRODUCCION).aggregate(total=Sum('cantidad'))['total'] or 0
             consumo = movs.filter(tipo_movimiento=TipoMovimiento.CONSUMO).aggregate(total=Sum('cantidad'))['total'] or 0
@@ -314,8 +339,32 @@ def registro_vacunacion_create(request):
 
 # Entidades
 def entidad_list(request):
-    entidades = Entidad.objects.all()
-    return render(request, 'Gestion/entidad_list.html', {'entidades': entidades})
+    query = request.GET.get('q', '')
+    rol_filter = request.GET.get('rol', '')
+    
+    entidades = Entidad.objects.all().order_by('nombre_razon_social')
+    
+    if query:
+        entidades = entidades.filter(
+            Q(nombre_razon_social__icontains=query) | 
+            Q(rut__icontains=query)
+        )
+        
+    if rol_filter == 'cliente':
+        entidades = entidades.filter(es_cliente=True)
+    elif rol_filter == 'proveedor':
+        entidades = entidades.filter(es_proveedor=True)
+        
+    paginator = Paginator(entidades, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'Gestion/entidad_list.html', {
+        'entidades': page_obj,
+        'page_obj': page_obj,
+        'is_paginated': page_obj.has_other_pages(),
+        'paginator': paginator
+    })
 
 def entidad_create(request):
     if request.method == 'POST':
@@ -345,8 +394,44 @@ def entidad_detail(request, pk):
     return render(request, 'Gestion/entidad_detail.html', {'entidad': entidad, 'title': entidad.nombre_razon_social})
 
 def transaccion_list(request):
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    tipo_filter = request.GET.get('tipo', '')
+    status_filter = request.GET.get('status', '')
+    entidad_query = request.GET.get('entidad', '')
+
     transacciones = CabeceraTransaccion.objects.all().order_by('-fecha')
-    return render(request, 'Gestion/transaccion_list.html', {'transacciones': transacciones})
+    
+    # Dynamic Filter Options
+    available_types = CabeceraTransaccion.objects.values_list('tipo_operacion', flat=True).distinct().order_by('tipo_operacion')
+    available_statuses = CabeceraTransaccion.objects.values_list('estado_pago', flat=True).distinct().order_by('estado_pago')
+
+    if start_date:
+        transacciones = transacciones.filter(fecha__gte=start_date)
+    if end_date:
+        transacciones = transacciones.filter(fecha__lte=end_date)
+    
+    if tipo_filter:
+        transacciones = transacciones.filter(tipo_operacion=tipo_filter)
+    
+    if status_filter:
+        transacciones = transacciones.filter(estado_pago=status_filter)
+    
+    if entidad_query:
+        transacciones = transacciones.filter(entidad__nombre_razon_social__icontains=entidad_query)
+
+    paginator = Paginator(transacciones, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'Gestion/transaccion_list.html', {
+        'transacciones': page_obj,
+        'page_obj': page_obj,
+        'is_paginated': page_obj.has_other_pages(),
+        'paginator': paginator,
+        'available_types': available_types,
+        'available_statuses': available_statuses
+    })
 
 # Shared logic helper
 def procesar_transaccion(request, tipo_operacion, template_name, title):
@@ -367,26 +452,30 @@ def procesar_transaccion(request, tipo_operacion, template_name, title):
                 for detalle in detalles:
                     detalle.transaccion = transaccion
                     detalle.save() # Signal triggers stock update and total calc
+                
+                # Handle deletions
+                for obj in formset.deleted_objects:
+                    obj.delete()
+
+                # 3. Update Base Price Logic
+                # Iterate over FORMS to access the prefix and POST data
+                for f in formset:
+                    # Skip if form is not valid or empty or marked for deletion
+                    if not f.cleaned_data or f.cleaned_data.get('DELETE'):
+                        continue
                     
-                    # 3. Update Base Price Logic
-                    # Check if "update_price_X" checkbox is present in POST data for this form index
-                    # Requires matching form prefix. 
-                    # Simpler approach: If 'update_base_price' is in POST (global) or per item?
-                    # Let's assume per-item checkbox in the row. 
-                    # Name format: form-0-update_price
-                    
-                    prefix = detalle.prefix # e.g. form-0
+                    prefix = f.prefix
                     if request.POST.get(f'{prefix}-update_price'):
+                        # Access the instance bound to this form
+                        detalle = f.instance
                         articulo = detalle.articulo
-                        # If Purchase, ref price is cost. If Sale, ref price is sale price.
-                        # Usually we update ref price on Purchase (Cost) or if explicitly set on Sale.
-                        # Let's just update perfectly to what was entered.
+                        
                         if articulo.precio_referencia != detalle.precio_unitario:
                             old_price = articulo.precio_referencia
                             articulo.precio_referencia = detalle.precio_unitario
-                            articulo.save() # Triggers metadata log signal? Yes.
+                            articulo.save() 
                             
-                            # Explicit Log for clarity
+                            # Explicit Log
                             from .signals import create_log_entry
                             create_log_entry(
                                 articulo, 'EDICION', 0, 
@@ -395,7 +484,7 @@ def procesar_transaccion(request, tipo_operacion, template_name, title):
                             )
 
                 messages.success(request, f'{title} registrada exitosamente.')
-                return redirect('transaccion-list')
+                return redirect('transaccion-detail', pk=transaccion.pk)
             except Exception as e:
                 messages.error(request, f'Error al guardar: {e}')
                 return render(request, template_name, {
@@ -446,16 +535,166 @@ def transaccion_update(request, pk):
             form.save()
             formset.save()
             messages.success(request, 'Transacción actualizada.')
-            return redirect('transaccion-list')
+            return redirect('transaccion-detail', pk=transaccion.pk)
     else:
         form = CabeceraTransaccionForm(instance=transaccion)
         formset = DetalleTransaccionFormSet(instance=transaccion)
-    return render(request, 'Gestion/transaccion_form.html', {
-        'form': form,
-        'formset': formset,
-        'title': 'Editar Transacción'
+    
+    # Pass Article Prices for JS
+    import json
+    precios = {a.id_articulo: str(a.precio_referencia) for a in Articulo.objects.all()}
+
+    return render(request, 'Gestion/transaccion_form_v2.html', {
+        'form': form, 
+        'formset': formset, 
+        'title': f'Editar {transaccion.get_tipo_operacion_display()}',
+        'tipo': transaccion.tipo_operacion,
+        'precios_json': json.dumps(precios)
     })
+
+def transaccion_cambiar_estado(request, pk, nuevo_estado):
+    transaccion = get_object_or_404(CabeceraTransaccion, pk=pk)
+    
+    # 1. Rules:
+    # - Cannot change if already ANULADO.
+    # - Can go to PAGADO from PENDIENTE.
+    # - Can go to ANULADO from PENDIENTE or PAGADO.
+    
+    if transaccion.estado_pago == 'ANULADO':
+        messages.error(request, 'Esta transacción ya está ANULADA y no se puede modificar.')
+        return redirect('transaccion-detail', pk=pk)
+
+    if nuevo_estado == 'PAGADO' and transaccion.estado_pago != 'PENDIENTE':
+         messages.error(request, 'Solo se puede pagar una transacción Pendiente.')
+         return redirect('transaccion-detail', pk=pk)
+
+    try:
+        from .models import EstadoPago, TipoOperacion
+        from .signals import create_log_entry
+        from decimal import Decimal
+
+        if nuevo_estado == 'ANULADO':
+            # REVERSE STOCK LOGIC
+            is_purchase = transaccion.tipo_operacion == TipoOperacion.COMPRA
+            
+            for detalle in transaccion.detalles.all():
+                articulo = detalle.articulo
+                cantidad = detalle.cantidad
+                # We need Decimal for calculations
+                cantidad_dec = Decimal(str(cantidad))
+
+                # CHECK RECIPE (Only for Sales typically, but check mostly for products)
+                # If it's a Sale of a Product with Recipe -> Restore Ingredients
+                # If it's a Purchase -> Just remove what was added (Ingredients or Products)
+                
+                # Logic from signals.py reversed:
+                receta = articulo.ingredientes_receta.all()
+                has_recipe = receta.exists()
+
+                if not is_purchase and has_recipe:
+                    # REVERSE RECIPE SALE: Add back ingredients
+                    for ing_receta in receta:
+                        ingrediente = ing_receta.ingrediente
+                        qty_per_unit = Decimal(str(ing_receta.cantidad))
+                        total_restore = cantidad_dec * qty_per_unit
+                        
+                        if ingrediente.controlar_stock:
+                            ingrediente.stock_actual += total_restore
+                            ingrediente.save()
+                            create_log_entry(
+                                ingrediente, 'AJUSTE', total_restore, 
+                                ingrediente.stock_actual - total_restore, ingrediente.stock_actual, 
+                                f"ANULACIÓN VENTA Pack: {articulo.nombre} (Doc: {transaccion.numero_documento})"
+                            )
+                else:
+                    # STANDARD ITEM (Purchase or Sale without recipe)
+                    if articulo.controlar_stock:
+                        old_stock = articulo.stock_actual
+                        if is_purchase:
+                            # Was added, so subtract
+                            articulo.stock_actual -= cantidad_dec
+                        else:
+                            # Was removed, so add
+                            articulo.stock_actual += cantidad_dec
+                        
+                        articulo.save()
+                        
+                        create_log_entry(
+                            articulo, 'AJUSTE', 
+                            -cantidad_dec if is_purchase else cantidad_dec,
+                            old_stock, articulo.stock_actual,
+                            f"ANULACIÓN {transaccion.get_tipo_operacion_display().upper()} #{transaccion.pk}"
+                        )
+
+        transaccion.estado_pago = nuevo_estado
+        transaccion.save()
+        messages.success(request, f'Estado actualizado a {nuevo_estado}. Stock ajustado correctamente.')
+        
+    except Exception as e:
+        messages.error(request, f'Error al actualizar estado: {e}')
+
+    return redirect('transaccion-detail', pk=pk)
+
 
 def transaccion_detail(request, pk):
     transaccion = get_object_or_404(CabeceraTransaccion, pk=pk)
     return render(request, 'Gestion/transaccion_detail.html', {'transaccion': transaccion, 'title': f'Detalle Transacción #{transaccion.pk}'})
+
+def transaccion_simple_create(request):
+    """Create a 'Simple Purchase' / Expense without item details"""
+    if request.method == 'POST':
+        form = CabeceraTransaccionSimpleForm(request.POST)
+        if form.is_valid():
+            transaccion = form.save(commit=False)
+            transaccion.tipo_operacion = TipoOperacion.COMPRA
+            transaccion.save()
+            messages.success(request, 'Gasto/Compra simple registrada exitosamente.')
+            return redirect('transaccion-list')
+    else:
+        form = CabeceraTransaccionSimpleForm(initial={'tipo_operacion': TipoOperacion.COMPRA, 'fecha': timezone.now().date()})
+    
+    return render(request, 'Gestion/transaccion_simple_form.html', {
+        'form': form,
+        'title': 'Registrar Gasto / Compra Simple'
+    })
+
+def auditoria_dashboard(request):
+    """General Audit Dashboard: Finance Overview"""
+    today = timezone.now().date()
+    try:
+        month = int(request.GET.get('month', today.month))
+    except ValueError:
+        month = today.month
+
+    try:
+        # Handle cases where year is passed as "2.026" or other formats
+        y_str = request.GET.get('year', str(today.year))
+        # Remove dots/commas just in case it came from a localized input
+        y_clean = y_str.replace('.', '').replace(',', '')
+        year = int(y_clean)
+    except ValueError:
+        year = today.year
+    
+    # Filter transactions by month/year and NOT Annulled
+    transacciones = CabeceraTransaccion.objects.filter(
+        fecha__year=year,
+        fecha__month=month
+    ).exclude(estado_pago='ANULADO').order_by('-fecha')
+    
+    # Aggregates
+    ventas = transacciones.filter(tipo_operacion=TipoOperacion.VENTA).aggregate(Sum('monto_total'))['monto_total__sum'] or 0
+    compras = transacciones.filter(tipo_operacion=TipoOperacion.COMPRA).aggregate(Sum('monto_total'))['monto_total__sum'] or 0
+    balance = ventas - compras
+    
+    context = {
+        'title': 'Auditoría General',
+        'transacciones': transacciones,
+        'total_ventas': ventas,
+        'total_compras': compras,
+        'balance': balance,
+        'current_month': month,
+        'current_year': year,
+        'months': range(1, 13),
+        'years': range(today.year - 2, today.year + 2),
+    }
+    return render(request, 'Gestion/auditoria_dashboard.html', context)

@@ -27,6 +27,14 @@ class EstadoPago(models.TextChoices):
     PAGADO = 'PAGADO', 'Pagado'
     ANULADO = 'ANULADO', 'Anulado'
 
+class MetodoPago(models.TextChoices):
+    EFECTIVO = 'EFECTIVO', 'Efectivo'
+    TRANSFERENCIA = 'TRANSFERENCIA', 'Transferencia'
+    DEBITO = 'DEBITO', 'Débito'
+    CREDITO = 'CREDITO', 'Crédito'
+    CHEQUE = 'CHEQUE', 'Cheque'
+    OTRO = 'OTRO', 'Otro'
+
 # --- INVENTORY & MASTERS ---
 
 class Articulo(models.Model):
@@ -182,7 +190,12 @@ class CabeceraTransaccion(models.Model):
         choices=EstadoPago.choices,
         default=EstadoPago.PENDIENTE
     )
-    metodo_pago = models.CharField(max_length=50, blank=True, null=True)
+    metodo_pago = models.CharField(
+        max_length=20, 
+        choices=MetodoPago.choices,
+        default=MetodoPago.EFECTIVO
+    )
+    observaciones = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.get_tipo_operacion_display()} #{self.id_transaccion} - {self.entidad.nombre_razon_social}"

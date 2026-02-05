@@ -1,4 +1,5 @@
 {% extends 'Gestion/base.html' %}
+{% load humanize %}
 
 {% block title %}{{ title }} - SGA{% endblock %}
 
@@ -6,12 +7,8 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">{{ title }}</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <!-- Edit is tricky for completed transactions, usually we allow restricted edits -->
-        <a href="{% url 'transaccion-update' transaccion.pk %}" class="btn btn-sm btn-outline-primary me-2">
-            <i class="bi bi-pencil"></i> Editar
-        </a>
-        <a href="{% url 'transaccion-list' %}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Volver
+        <a href="{% url 'transaccion-list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver a Transacciones
         </a>
     </div>
 </div>
@@ -20,43 +17,64 @@
     <!-- Header -->
     <div class="col-md-12 mb-4">
         <div class="card shadow-sm">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">Datos Generales</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    {{ transaccion.get_tipo_operacion_display }} #{{ transaccion.pk }}
+                    {% if transaccion.estado_pago == 'PENDIENTE' %}
+                    <span class="badge bg-warning text-dark">PENDIENTE</span>
+                    {% elif transaccion.estado_pago == 'PAGADO' %}
+                    <span class="badge bg-success">PAGADO</span>
+                    {% elif transaccion.estado_pago == 'ANULADO' %}
+                    <span class="badge bg-danger">ANULADO</span>
+                    {% endif %}
+                </h5>
+                <div>
+                    <button onclick="window.print()" class="btn btn-secondary me-2">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
+
+                    {% if transaccion.estado_pago == 'PENDIENTE' %}
+                    <a href="{% url 'transaccion-cambiar-estado' transaccion.pk 'PAGADO' %}"
+                        class="btn btn-success me-2" onclick="return confirm('¿Confirmar pago? No se podrá revertir.')">
+                        <i class="bi bi-check-circle"></i> Pagar
+                    </a>
+                    {% endif %}
+
+                    {% if transaccion.estado_pago != 'ANULADO' %}
+                    <a href="{% url 'transaccion-cambiar-estado' transaccion.pk 'ANULADO' %}" class="btn btn-danger"
+                        onclick="return confirm('¿ANULAR transacción? Se revertirá el stock. Esta acción es irreversible.')">
+                        <i class="bi bi-x-circle"></i> Anular
+                    </a>
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-4">
-                        <strong>Tipo:</strong>
-                        {% if transaccion.tipo_operacion == 'COMPRA' %}
-                        <span class="badge bg-danger">COMPRA</span>
-                        {% else %}
-                        <span class="badge bg-success">VENTA</span>
-                        {% endif %}
+                    <div class="col-md-6">
+                        <p><strong>Entidad:</strong> {{ transaccion.entidad.nombre_razon_social }}</p>
+                        <p><strong>Fecha:</strong> {{ transaccion.fecha|date:"d/m/Y" }}</p>
                     </div>
-                    <div class="col-md-4">
-                        <strong>Fecha:</strong> {{ transaccion.fecha|date:"d/m/Y" }}
-                    </div>
-                    <div class="col-md-4">
-                        <strong>Entidad:</strong> {{ transaccion.entidad.nombre_razon_social }}
-                    </div>
-                    <div class="col-md-4 mt-2">
-                        <strong>N° Documento:</strong> {{ transaccion.numero_documento|default:"-" }}
-                    </div>
-                    <div class="col-md-4 mt-2">
-                        <strong>Estado Pago:</strong> {{ transaccion.get_estado_pago_display }}
-                    </div>
-                    <div class="col-md-4 mt-2">
-                        <strong>Método Pago:</strong> {{ transaccion.metodo_pago|default:"-" }}
-                    </div>
-                    <div class="col-md-12 mt-3">
-                        <h4 class="text-end">Total: ${{ transaccion.monto_total }}</h4>
+                    <div class="col-md-6">
+                        <p><strong>Documento:</strong> {{ transaccion.numero_documento|default:"N/A" }}</p>
+                        <p><strong>Método de Pago:</strong> {{ transaccion.metodo_pago|default:"N/A" }}</p>
+                        <p class="h4 mt-3 text-primary"><strong>Total:</strong>
+                            ${{ transaccion.monto_total|floatformat:0|intcomma }}</p>
                     </div>
                 </div>
+                {% if transaccion.observaciones %}
+                <div class="row mt-3 border-top pt-3">
+                    <div class="col-12">
+                        <strong>Observaciones:</strong>
+                        <p class="text-muted">{{ transaccion.observaciones|linebreaks }}</p>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Details -->
+    <!-- Items -->
+    {% if transaccion.detalles.exists %}
     <div class="col-md-12">
         <div class="card shadow-sm">
             <div class="card-header bg-light">
@@ -68,18 +86,18 @@
                         <thead>
                             <tr>
                                 <th>Artículo</th>
-                                <th>Cantidad</th>
-                                <th>Precio Unit.</th>
-                                <th>Subtotal</th>
+                                <th class="text-center">Cantidad</th>
+                                <th class="text-end">Precio Unit.</th>
+                                <th class="text-end">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for detalle in transaccion.detalles.all %}
+                            {% for item in transaccion.detalles.all %}
                             <tr>
-                                <td>{{ detalle.articulo.nombre }}</td>
-                                <td>{{ detalle.cantidad }}</td>
-                                <td>${{ detalle.precio_unitario }}</td>
-                                <td>${{ detalle.subtotal }}</td>
+                                <td>{{ item.articulo.nombre }}</td>
+                                <td class="text-center">{{ item.cantidad }} {{ item.articulo.unidad_medida }}</td>
+                                <td class="text-end">$ {{ item.precio_unitario|floatformat:0|intcomma }}</td>
+                                <td class="text-end">$ {{ item.subtotal|floatformat:0|intcomma }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -88,5 +106,6 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
 {% endblock %}

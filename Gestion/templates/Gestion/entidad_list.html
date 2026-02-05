@@ -5,7 +5,17 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Entidades (Clientes/Proveedores)</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="d-flex align-items-center">
+        <form class="d-flex me-3" method="get">
+            <input class="form-control form-control-sm me-2" type="search" name="q" placeholder="Nombre o RUT..."
+                value="{{ request.GET.q }}">
+            <select class="form-select form-select-sm me-2" name="rol">
+                <option value="">Todos los roles</option>
+                <option value="cliente" {% if request.GET.rol == 'cliente' %}selected{% endif %}>Clientes</option>
+                <option value="proveedor" {% if request.GET.rol == 'proveedor' %}selected{% endif %}>Proveedores</option>
+            </select>
+            <button class="btn btn-sm btn-outline-secondary" type="submit">Filtrar</button>
+        </form>
         <a href="{% url 'entidad-create' %}" class="btn btn-sm btn-primary">
             <i class="bi bi-plus-lg"></i> Nueva Entidad
         </a>
@@ -50,4 +60,6 @@
         </tbody>
     </table>
 </div>
+
+{% include 'Gestion/pagination.html' %}
 {% endblock %}

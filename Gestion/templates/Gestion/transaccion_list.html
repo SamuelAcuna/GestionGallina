@@ -2,76 +2,106 @@
 
 {% block title %}Transacciones - SGA{% endblock %}
 
+{% load humanize %}
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Transacciones Comerciales</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{% url 'compra-create' %}" class="btn btn-sm btn-success me-2">
-            <i class="bi bi-cart-plus"></i> Nueva Compra
-        </a>
-        <a href="{% url 'venta-create' %}" class="btn btn-sm btn-primary">
-            <i class="bi bi-cart-dash"></i> Nueva Venta
-        </a>
+    <h1 class="h2">Transacciones</h1>
+    <div class="d-flex align-items-center">
+        <form class="d-flex me-3 align-items-center" method="get">
+            <input class="form-control form-control-sm me-1" type="date" name="start_date"
+                value="{{ request.GET.start_date }}" placeholder="Desde">
+            <span class="me-1">-</span>
+            <input class="form-control form-control-sm me-2" type="date" name="end_date"
+                value="{{ request.GET.end_date }}" placeholder="Hasta">
+
+            <select class="form-select form-select-sm me-2" name="tipo">
+                <option value="">Tipo</option>
+                {% for t in available_types %}
+                <option value="{{ t }}" {% if request.GET.tipo == t %}selected{% endif %}>
+                    {{ t|title }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <select class="form-select form-select-sm me-2" name="status">
+                <option value="">Estado</option>
+                {% for s in available_statuses %}
+                <option value="{{ s }}" {% if request.GET.status == s %}selected{% endif %}>
+                    {{ s|title }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <input class="form-control form-control-sm me-2" type="text" name="entidad" placeholder="Entidad..."
+                value="{{ request.GET.entidad }}">
+
+            <button class="btn btn-sm btn-outline-secondary" type="submit">Filtrar</button>
+        </form>
+
+        <div class="btn-group">
+            <a href="{% url 'compra-create' %}" class="btn btn-sm btn-outline-primary">Nueva Compra</a>
+            <a href="{% url 'transaccion-simple-create' %}" class="btn btn-sm btn-secondary">Registrar Gasto</a>
+            <a href="{% url 'venta-create' %}" class="btn btn-sm btn-outline-success">Nueva Venta</a>
+        </div>
     </div>
 </div>
 
-<div class="table-responsive">
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>Tipo</th>
-                <th>Entidad</th>
-                <th>Doc. Nro</th>
-                <th>Monto Total</th>
-                <th>Estado Pago</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for transaccion in transacciones %}
-            <tr>
-                <td>#{{ transaccion.pk }}</td>
-                <td>{{ transaccion.fecha|date:"d/m/Y" }}</td>
-                <td>
-                    {% if transaccion.tipo_operacion == 'COMPRA' %}
-                    <span class="badge bg-danger">Compra</span>
-                    {% else %}
-                    <span class="badge bg-success">Venta</span>
-                    {% endif %}
-                </td>
-                <td>{{ transaccion.entidad.nombre_razon_social }}</td>
-                <td>{{ transaccion.numero_documento|default:"-" }}</td>
-                <td><strong>${{ transaccion.monto_total }}</strong></td>
-                <td>
-                    {% if transaccion.estado_pago == 'PENDIENTE' %}
-                    <span class="badge bg-warning text-dark">Pendiente</span>
-                    {% elif transaccion.estado_pago == 'PAGADO' %}
-                    <span class="badge bg-success">Pagado</span>
-                    {% else %}
-                    <span class="badge bg-secondary">Anulado</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <div class="btn-group">
-                        <a href="{% url 'transaccion-update' transaccion.pk %}" class="btn btn-sm btn-outline-secondary"
-                            title="Editar">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <a href="{% url 'transaccion-detail' transaccion.pk %}" class="btn btn-sm btn-outline-info"
-                            title="Ver Detalle">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                    </div>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="8" class="text-center">No hay transacciones registradas.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Entidad</th>
+                        <th>Documento</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transacciones %}
+                    <tr>
+                        <td>#{{ t.pk }}</td>
+                        <td>{{ t.fecha|date:"d/m/Y" }}</td>
+                        <td>
+                            {% if t.tipo_operacion == 'COMPRA' %}
+                            <span class="badge bg-primary">COMPRA</span>
+                            {% else %}
+                            <span class="badge bg-success">VENTA</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ t.entidad.nombre_razon_social }}</td>
+                        <td>{{ t.numero_documento }}</td>
+                        <td class="text-nowrap">$ {{ t.monto_total|floatformat:0|intcomma }}</td>
+                        <td>
+                            {% if t.estado_pago == 'PENDIENTE' %}
+                            <span class="badge bg-warning text-dark">PENDIENTE</span>
+                            {% elif t.estado_pago == 'PAGADO' %}
+                            <span class="badge bg-success">PAGADO</span>
+                            {% elif t.estado_pago == 'ANULADO' %}
+                            <span class="badge bg-danger">ANULADO</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'transaccion-detail' t.pk %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">No hay transacciones registradas.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
+{% include 'Gestion/pagination.html' %}
 {% endblock %}

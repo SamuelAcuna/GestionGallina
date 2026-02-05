@@ -4,13 +4,45 @@
 <h2 class="text-center mb-4">Seleccione Lote</h2>
 
 <div class="row">
-    {% for lote in lotes %}
-    <div class="col-md-6 col-lg-4">
-        <a href="{% url 'kiosco-menu' lote.pk %}" class="btn btn-light w-100 kiosk-btn text-primary border-primary">
-            <i class="bi bi-house-door"></i>
-            {{ lote.galpon.nombre }}
-            <small class="text-muted fs-6">{{ lote.raza }}</small>
-        </a>
+    {% for item in lotes_stats %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100 shadow-sm border-0 hover-shadow"
+            style="border-radius: 15px; overflow: hidden; transition: transform 0.2s;">
+            <a href="{% url 'kiosco-menu' item.lote.pk %}" class="text-decoration-none text-dark stretched-link">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <span class="badge bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+                            <i class="bi bi-house-door-fill fs-2"></i>
+                        </span>
+                    </div>
+                    <h3 class="card-title fw-bold mb-1">{{ item.lote.galpon.nombre }}</h3>
+                    <p class="text-muted mb-4">{{ item.lote.raza }} <span class="mx-1">•</span> <strong>
+                            {{ item.lote.aves_actuales }}</strong> aves</p>
+
+                    <div class="row g-2 text-start bg-light rounded-3 p-2">
+                        <div class="col-4 text-center border-end">
+                            <small class="d-block text-muted text-uppercase"
+                                style="font-size: 0.7rem;">Producción</small>
+                            <span class="text-success fw-bold">
+                                <i class="bi bi-egg-fill me-1"></i>{{ item.produccion_hoy }}
+                            </span>
+                        </div>
+                        <div class="col-4 text-center border-end">
+                            <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">Consumo</small>
+                            <span class="text-warning fw-bold">
+                                <i class="bi bi-basket-fill me-1"></i>{{ item.consumo_hoy|floatformat:1  }}
+                            </span>
+                        </div>
+                        <div class="col-4 text-center">
+                            <small class="d-block text-muted text-uppercase" style="font-size: 0.7rem;">Bajas</small>
+                            <span class="text-danger fw-bold">
+                                <i class="bi bi-heart-pulse-fill me-1"></i>{{ item.bajas_hoy }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
     </div>
     {% empty %}
     <div class="col-12 text-center">
@@ -19,6 +51,13 @@
     </div>
     {% endfor %}
 </div>
+
+<style>
+    .hover-shadow:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
+    }
+</style>
 
 <div class="text-center mt-5">
     <a href="/" class="btn btn-outline-secondary">Salir al Panel Admin</a>

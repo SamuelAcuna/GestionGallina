@@ -42,11 +42,11 @@
                                 <td>{{ stat.date|date:"d/m" }}</td>
                                 <td
                                     class="text-end {% if stat.produccion > 0 %}text-success fw-bold{% else %}text-muted{% endif %}">
-                                    {{ stat.produccion }}
+                                    {{ stat.produccion  }}
                                 </td>
                                 <td
                                     class="text-end {% if stat.consumo > 0 %}text-warning fw-bold{% else %}text-muted{% endif %}">
-                                    {{ stat.consumo }}
+                                    {{ stat.consumo|floatformat:1  }}
                                 </td>
                             </tr>
                             {% endfor %}

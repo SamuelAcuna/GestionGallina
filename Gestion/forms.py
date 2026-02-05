@@ -16,7 +16,7 @@ class ArticuloForm(forms.ModelForm):
             'unidad_medida': forms.Select(attrs={'class': 'form-select'}),
             'stock_actual': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'title': 'Modificar solo mediante transacciones o movimientos'}),
             'stock_minimo': forms.NumberInput(attrs={'class': 'form-control'}),
-            'precio_referencia': forms.NumberInput(attrs={'class': 'form-control'}),
+            'precio_referencia': forms.NumberInput(attrs={'class': 'form-control', 'step': '1'}),
             'controlar_stock': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'es_insumo_receta': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -102,14 +102,36 @@ class EntidadForm(forms.ModelForm):
 class CabeceraTransaccionForm(forms.ModelForm):
     class Meta:
         model = CabeceraTransaccion
-        exclude = ['monto_total'] # Calculated
+        model = CabeceraTransaccion
+        exclude = ['monto_total', 'tipo_operacion'] # Calculated or set by View
         widgets = {
-            'tipo_operacion': forms.Select(attrs={'class': 'form-select'}),
             'entidad': forms.Select(attrs={'class': 'form-select'}),
-            'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
             'numero_documento': forms.TextInput(attrs={'class': 'form-control'}),
             'estado_pago': forms.Select(attrs={'class': 'form-select'}),
-            'metodo_pago': forms.TextInput(attrs={'class': 'form-control'}),
+            'metodo_pago': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Exclude 'ANULADO' from choices if creating
+        if not self.instance.pk:
+            valid_choices = [c for c in self.fields['estado_pago'].choices if c[0] != 'ANULADO']
+            self.fields['estado_pago'].choices = valid_choices
+
+class CabeceraTransaccionSimpleForm(forms.ModelForm):
+    class Meta:
+        model = CabeceraTransaccion
+        fields = ['entidad', 'fecha', 'numero_documento', 'monto_total', 'estado_pago', 'metodo_pago', 'observaciones', 'tipo_operacion']
+        widgets = {
+            'entidad': forms.Select(attrs={'class': 'form-select'}),
+            'fecha': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
+            'numero_documento': forms.TextInput(attrs={'class': 'form-control'}),
+            'monto_total': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '1'}),
+            'estado_pago': forms.Select(attrs={'class': 'form-select'}),
+            'metodo_pago': forms.Select(attrs={'class': 'form-select'}),
+            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'tipo_operacion': forms.HiddenInput(),
         }
 
 class DetalleTransaccionForm(forms.ModelForm):
@@ -118,8 +140,8 @@ class DetalleTransaccionForm(forms.ModelForm):
         fields = ['articulo', 'cantidad', 'precio_unitario']
         widgets = {
             'articulo': forms.Select(attrs={'class': 'form-select articulo-select'}), # Class for JS hook
-            'cantidad': forms.NumberInput(attrs={'class': 'form-control cantidad-input'}),
-            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control precio-input'}),
+            'cantidad': forms.NumberInput(attrs={'class': 'form-control cantidad-input', 'step': '0.01'}),
+            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control precio-input', 'step': '1'}),
         }
 
     def __init__(self, *args, **kwargs):

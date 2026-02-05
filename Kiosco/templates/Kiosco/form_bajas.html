@@ -38,6 +38,45 @@
     </div>
 </div>
 
+</div>
+
+<!-- Daily Log -->
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8">
+        <h5 class="text-center mb-3">Registros de Hoy</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th>Hora</th>
+                        <th>Motivo</th>
+                        <th>Cant.</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in movimientos %}
+                    <tr>
+                        <td>{{ m.fecha|date:"H:i" }}</td>
+                        <td>{{ m.get_motivo_display }}</td>
+                        <td>{{ m.cantidad }}</td>
+                        <td>
+                            <a href="{% url 'kiosco-bajas-edit' m.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-muted">Sin registros hoy</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <div class="text-center mt-4">
     <a href="{% url 'kiosco-menu' lote.pk %}" class="btn btn-outline-secondary btn-lg px-5">
         <i class="bi bi-x-lg"></i> Cancelar

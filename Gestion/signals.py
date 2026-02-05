@@ -31,37 +31,38 @@ def update_stock_transaction(sender, instance, created, **kwargs):
     if not created:
         return # For now simplify, handle updates later if needed
 
-    articulo = instance.articulo
-    if not articulo.controlar_stock:
-        return
-
     transaccion = instance.transaccion
     
     # Update Transaction Total
     transaccion.monto_total = transaccion.monto_total + instance.subtotal
     transaccion.save(update_fields=['monto_total'])
 
+    articulo = instance.articulo
     stock_inicial = articulo.stock_actual
 
-    # Update Stock
+    # Update Stock Logic
     if transaccion.tipo_operacion == TipoOperacion.COMPRA:
-        articulo.stock_actual = F('stock_actual') + instance.cantidad
-        articulo.save()
-        
-        # Log Purchase
-        articulo.refresh_from_db()
-        create_log_entry(
-            articulo, 'COMPRA', instance.cantidad, 
-            stock_inicial, articulo.stock_actual, 
-            f"Compra a {transaccion.entidad} (Doc: {transaccion.numero_documento})"
-        )
+        # Only update stock if control is enabled
+        if articulo.controlar_stock:
+            articulo.stock_actual = F('stock_actual') + instance.cantidad
+            articulo.save()
+            
+            # Log Purchase
+            articulo.refresh_from_db()
+            create_log_entry(
+                articulo, 'COMPRA', instance.cantidad, 
+                stock_inicial, articulo.stock_actual, 
+                f"Compra a {transaccion.entidad} (Doc: {transaccion.numero_documento})"
+            )
         
     elif transaccion.tipo_operacion == TipoOperacion.VENTA:
-        # Check if this article has a recipe
+        # Check if this article has a recipe (ALWAYS check this, regardless of own stock control)
         receta = articulo.ingredientes_receta.all()
 
         if receta.exists():
-            # Log the Pack Sale event
+            # It's a configured product/pack -> deducted ingredients
+            
+            # Log the Pack Sale event (Just for history, even if stock doesn't move)
             create_log_entry(
                 articulo, 'VENTA', instance.cantidad, 
                 stock_inicial, stock_inicial, 
@@ -91,11 +92,13 @@ def update_stock_transaction(sender, instance, created, **kwargs):
                     )
 
         else:
-            # Standard Sale (No recipe)
-            articulo.stock_actual = F('stock_actual') - instance.cantidad
-            articulo.save()
-            
-            # Log Sale
+            # Standard Sale (No recipe) -> Only deduct if control is enabled
+            if articulo.controlar_stock:
+                articulo.stock_actual = F('stock_actual') - instance.cantidad
+                articulo.save()
+                
+                # Log Sale
+
             articulo.refresh_from_db()
             create_log_entry(
                 articulo, 'VENTA', instance.cantidad,

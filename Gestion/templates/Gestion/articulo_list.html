@@ -1,11 +1,23 @@
 {% extends 'Gestion/base.html' %}
+{% load humanize %}
 
 {% block title %}Inventario - SGA{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Inventario de Artículos</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="d-flex align-items-center">
+        <form class="d-flex me-3" method="get">
+            <input class="form-control form-control-sm me-2" type="search" name="q" placeholder="Buscar por nombre..."
+                value="{{ request.GET.q }}">
+            <select class="form-select form-select-sm me-2" name="tipo">
+                <option value="">Todos los tipos</option>
+                {% for t in available_types %}
+                <option value="{{ t }}" {% if request.GET.tipo == t %}selected{% endif %}>{{ t|title }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-sm btn-outline-secondary" type="submit">Filtrar</button>
+        </form>
         <a href="{% url 'articulo-create' %}" class="btn btn-sm btn-primary">
             <i class="bi bi-plus-lg"></i> Nuevo Artículo
         </a>
@@ -19,6 +31,7 @@
                 <th>Nombre</th>
                 <th>Tipo</th>
                 <th>Unidad</th>
+                <th>Precio Referencial</th>
                 <th>Control Stock</th>
                 <th>Stock Actual</th>
                 <th>Stock Mínimo</th>
@@ -31,6 +44,7 @@
                 <td>{{ articulo.nombre }}</td>
                 <td><span class="badge bg-secondary">{{ articulo.get_tipo_display }}</span></td>
                 <td>{{ articulo.unidad_medida }}</td>
+                <td style="text-align: right;">$ {{ articulo.precio_referencia|floatformat:0|intcomma }}</td>
                 <td>
                     {% if articulo.controlar_stock %}
                     <i class="bi bi-check-circle-fill text-success"></i>
@@ -75,4 +89,6 @@
         </tbody>
     </table>
 </div>
+
+{% include 'Gestion/pagination.html' %}
 {% endblock %}
