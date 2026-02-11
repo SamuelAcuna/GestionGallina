@@ -56,6 +56,19 @@
                     <div class="text-center mb-4">
                         <h4>🐤 SGA</h4>
                         <small class="text-muted">Gestión Avícola</small>
+                        {% if user.is_authenticated %}
+                        <div class="mt-3 pb-3 border-bottom">
+                            <small class="d-block text-muted">Bienvenido,</small>
+                            <strong>{{ user.username|title }}</strong>
+                            <form action="{% url 'logout' %}" method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit"
+                                    class="btn btn-link btn-sm text-danger text-decoration-none p-0 ms-2">
+                                    <i class="bi bi-box-arrow-right"></i> Salir
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
                     </div>
                     <ul class="nav flex-column">
                         <li class="nav-item">

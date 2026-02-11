@@ -4,7 +4,9 @@ from django.utils import timezone
 from Gestion.models import Lote, Articulo, MovimientoInterno, TipoMovimiento, TipoArticulo, RegistroBajas
 
 from django.db.models import Sum
+from django.contrib.auth.decorators import login_required
 
+@login_required
 def index(request):
     """Kiosk Home: Select Active Lote with Daily Stats"""
     lotes = Lote.objects.filter(estado=True).order_by('galpon__nombre')
@@ -39,11 +41,13 @@ def index(request):
 
     return render(request, 'Kiosco/index.html', {'lotes_stats': lotes_stats})
 
+@login_required
 def menu_acciones(request, lote_id):
     """Menu: Select Action for a specific Lote"""
     lote = get_object_or_404(Lote, pk=lote_id)
     return render(request, 'Kiosco/menu.html', {'lote': lote})
 
+@login_required
 def registrar_consumo(request, lote_id):
     """Simplified Feed Consumption Form"""
     lote = get_object_or_404(Lote, pk=lote_id)
@@ -83,6 +87,7 @@ def registrar_consumo(request, lote_id):
 
     return render(request, 'Kiosco/form_consumo.html', {'lote': lote, 'alimentos': alimentos, 'movimientos': movimientos})
 
+@login_required
 def registrar_produccion(request, lote_id):
     """Simplified Egg Production Form"""
     lote = get_object_or_404(Lote, pk=lote_id)
@@ -119,6 +124,7 @@ def registrar_produccion(request, lote_id):
     print(movimientos)
     return render(request, 'Kiosco/form_produccion.html', {'lote': lote, 'productos': productos, 'movimientos': movimientos})
 
+@login_required
 def registrar_bajas(request, lote_id):
     """Simplified Mortality Form"""
     lote = get_object_or_404(Lote, pk=lote_id)
@@ -154,6 +160,7 @@ def registrar_bajas(request, lote_id):
 
 # --- EDIT VIEWS ---
 
+@login_required
 def movimiento_edit(request, pk):
     movimiento = get_object_or_404(MovimientoInterno, pk=pk)
     lote = movimiento.lote
@@ -169,6 +176,7 @@ def movimiento_edit(request, pk):
     
     return render(request, 'Kiosco/movimiento_edit.html', {'movimiento': movimiento, 'lote': lote})
 
+@login_required
 def baja_edit(request, pk):
     baja = get_object_or_404(RegistroBajas, pk=pk)
     lote = baja.lote

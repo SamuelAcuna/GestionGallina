@@ -13,7 +13,9 @@ from .forms import (
     CabeceraTransaccionSimpleForm
 )
 from .utils import get_ordering
+from django.contrib.auth.decorators import login_required
 
+@login_required
 def index(request):
     """Dashboard View"""
     
@@ -60,6 +62,7 @@ def index(request):
 
 # --- ARTICULOS ---
 
+@login_required
 def articulo_list(request):
     query = request.GET.get('q', '')
     tipo_filter = request.GET.get('tipo', '')
@@ -93,6 +96,7 @@ def articulo_list(request):
         'available_types': available_types
     })
 
+@login_required
 def articulo_create(request):
     if request.method == 'POST':
         form = ArticuloForm(request.POST)
@@ -106,6 +110,7 @@ def articulo_create(request):
 
     return render(request, 'Gestion/articulo_form.html', {'form': form, 'title': 'Nuevo Artículo'})
 
+@login_required
 def articulo_update(request, pk):
     articulo = get_object_or_404(Articulo, pk=pk)
     
@@ -141,10 +146,12 @@ def articulo_update(request, pk):
         'receta_form': receta_form
     })
 
+@login_required
 def articulo_detail(request, pk):
     articulo = get_object_or_404(Articulo, pk=pk)
     return render(request, 'Gestion/articulo_detail.html', {'articulo': articulo, 'title': articulo.nombre})
 
+@login_required
 def articulo_kardex(request, pk):
     articulo = get_object_or_404(Articulo, pk=pk)
     
@@ -160,6 +167,7 @@ def articulo_kardex(request, pk):
 # Keeping receta_delete as it is used by the form actions
 
 
+@login_required
 def receta_manage(request, pk):
     articulo = get_object_or_404(Articulo, pk=pk)
     recetas = Receta.objects.filter(producto=articulo)
@@ -181,6 +189,7 @@ def receta_manage(request, pk):
         'form': form
     })
 
+@login_required
 def receta_delete(request, pk):
     receta = get_object_or_404(Receta, pk=pk)
     producto_pk = receta.producto.pk
@@ -190,6 +199,7 @@ def receta_delete(request, pk):
 
 # --- GALPONES ---
 
+@login_required
 def galpon_list(request):
     galpones = Galpon.objects.all()
     
@@ -201,6 +211,7 @@ def galpon_list(request):
     
     return render(request, 'Gestion/galpon_list.html', {'galpones': galpones})
 
+@login_required
 def galpon_create(request):
     if request.method == 'POST':
         form = GalponForm(request.POST)
@@ -212,6 +223,7 @@ def galpon_create(request):
         form = GalponForm()
     return render(request, 'Gestion/galpon_form.html', {'form': form, 'title': 'Nuevo Galpón'})
 
+@login_required
 def galpon_update(request, pk):
     galpon = get_object_or_404(Galpon, pk=pk)
     if request.method == 'POST':
@@ -224,6 +236,7 @@ def galpon_update(request, pk):
         form = GalponForm(instance=galpon)
     return render(request, 'Gestion/galpon_form.html', {'form': form, 'title': 'Editar Galpón'})
 
+@login_required
 def galpon_delete(request, pk):
     galpon = get_object_or_404(Galpon, pk=pk)
     if request.method == 'POST':
@@ -234,6 +247,7 @@ def galpon_delete(request, pk):
 
 # --- BIOLOGICAL CYCLE ---
 
+@login_required
 def lote_list(request):
     lotes = Lote.objects.all()
 
@@ -251,6 +265,7 @@ def lote_list(request):
         
     return render(request, 'Gestion/lote_list.html', {'lotes': lotes})
 
+@login_required
 def lote_create(request):
     if request.method == 'POST':
         form = LoteForm(request.POST)
@@ -262,6 +277,7 @@ def lote_create(request):
         form = LoteForm()
     return render(request, 'Gestion/lote_form.html', {'form': form, 'title': 'Nuevo Lote'})
 
+@login_required
 def lote_detail(request, pk):
     lote = get_object_or_404(Lote, pk=pk)
     bajas = RegistroBajas.objects.filter(lote=lote).order_by('-fecha')
@@ -274,6 +290,7 @@ def lote_detail(request, pk):
         'vacunaciones': vacunaciones
     })
 
+@login_required
 def lote_update(request, pk):
     lote = get_object_or_404(Lote, pk=pk)
     if request.method == 'POST':
@@ -286,6 +303,7 @@ def lote_update(request, pk):
         form = LoteForm(instance=lote)
     return render(request, 'Gestion/lote_form.html', {'form': form, 'title': 'Editar Lote'})
 
+@login_required
 def lote_overview(request):
     """Macro view of all active lots with last 5 days summary"""
     lotes = Lote.objects.filter(estado=True).order_by('galpon__nombre')
@@ -320,6 +338,7 @@ def lote_overview(request):
 
 # --- REGISTRO BAJAS, MOVIMIENTOS, VACUNAS ---
 
+@login_required
 def registro_bajas_create(request):
     initial_lote = request.GET.get('lote_id')
     form = RegistroBajasForm(initial={'lote': initial_lote} if initial_lote else None)
@@ -333,6 +352,7 @@ def registro_bajas_create(request):
             
     return render(request, 'Gestion/registro_bajas_form.html', {'form': form, 'title': 'Registrar Baja'})
 
+@login_required
 def movimiento_interno_create(request):
     initial_lote = request.GET.get('lote_id')
     form = MovimientoInternoForm(initial={'lote': initial_lote} if initial_lote else None)
@@ -349,6 +369,7 @@ def movimiento_interno_create(request):
     
     return render(request, 'Gestion/movimiento_interno_form.html', {'form': form, 'title': 'Registrar Movimiento'})
 
+@login_required
 def registro_vacunacion_create(request):
     initial_lote = request.GET.get('lote_id')
     form = RegistroVacunacionForm(initial={'lote': initial_lote} if initial_lote else None)
@@ -365,6 +386,7 @@ def registro_vacunacion_create(request):
 # --- COMMERCIAL CYCLE ---
 
 # Entidades
+@login_required
 def entidad_list(request):
     query = request.GET.get('q', '')
     rol_filter = request.GET.get('rol', '')
@@ -399,6 +421,7 @@ def entidad_list(request):
         'paginator': paginator
     })
 
+@login_required
 def entidad_create(request):
     if request.method == 'POST':
         form = EntidadForm(request.POST)
@@ -410,6 +433,7 @@ def entidad_create(request):
         form = EntidadForm()
     return render(request, 'Gestion/entidad_form.html', {'form': form, 'title': 'Nueva Entidad'})
 
+@login_required
 def entidad_update(request, pk):
     entidad = get_object_or_404(Entidad, pk=pk)
     if request.method == 'POST':
@@ -422,10 +446,12 @@ def entidad_update(request, pk):
         form = EntidadForm(instance=entidad)
     return render(request, 'Gestion/entidad_form.html', {'form': form, 'title': 'Editar Entidad'})
 
+@login_required
 def entidad_detail(request, pk):
     entidad = get_object_or_404(Entidad, pk=pk)
     return render(request, 'Gestion/entidad_detail.html', {'entidad': entidad, 'title': entidad.nombre_razon_social})
 
+@login_required
 def transaccion_list(request):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
@@ -556,18 +582,22 @@ def procesar_transaccion(request, tipo_operacion, template_name, title):
         'precios_json': json.dumps(precios)
     })
 
+@login_required
 def compra_create(request):
     return procesar_transaccion(request, TipoOperacion.COMPRA, 'Gestion/transaccion_form_v2.html', 'Nueva Compra')
 
+@login_required
 def venta_create(request):
     return procesar_transaccion(request, TipoOperacion.VENTA, 'Gestion/transaccion_form_v2.html', 'Nueva Venta')
 
 # Deprecated/Redirect old mapping if needed, or remove
+@login_required
 def transaccion_create(request):
     return redirect('transaccion-list')
     return render(request, 'Gestion/confirm_delete.html', {'object': entidad, 'cancel_url': 'entidad-list'})
 
 # Transacciones
+@login_required
 def transaccion_update(request, pk):
     transaccion = get_object_or_404(CabeceraTransaccion, pk=pk)
     if request.method == 'POST':
@@ -594,6 +624,7 @@ def transaccion_update(request, pk):
         'precios_json': json.dumps(precios)
     })
 
+@login_required
 def transaccion_cambiar_estado(request, pk, nuevo_estado):
     transaccion = get_object_or_404(CabeceraTransaccion, pk=pk)
     
@@ -678,10 +709,12 @@ def transaccion_cambiar_estado(request, pk, nuevo_estado):
     return redirect('transaccion-detail', pk=pk)
 
 
+@login_required
 def transaccion_detail(request, pk):
     transaccion = get_object_or_404(CabeceraTransaccion, pk=pk)
     return render(request, 'Gestion/transaccion_detail.html', {'transaccion': transaccion, 'title': f'Detalle Transacción #{transaccion.pk}'})
 
+@login_required
 def transaccion_simple_create(request):
     """Create a 'Simple Purchase' / Expense without item details"""
     if request.method == 'POST':
@@ -700,6 +733,7 @@ def transaccion_simple_create(request):
         'title': 'Registrar Gasto / Compra Simple'
     })
 
+@login_required
 def auditoria_dashboard(request):
     """General Audit Dashboard: Finance Overview"""
     today = timezone.now().date()
@@ -741,6 +775,7 @@ def auditoria_dashboard(request):
     }
     return render(request, 'Gestion/auditoria_dashboard.html', context)
 
+@login_required
 def salud_dashboard(request):
     """Health & Performance Dashboard"""
     import json
