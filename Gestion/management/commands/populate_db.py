@@ -107,37 +107,45 @@ class Command(BaseCommand):
 
         # 6. Transacciones (Compras para Stock)
         # Compra Alimento
-        compra1 = CabeceraTransaccion.objects.create(
+        # 6. Transacciones (Compras para Stock)
+        # Compra Alimento
+        compra1, created = CabeceraTransaccion.objects.get_or_create(
+            numero_documento="FACT-1001",
             tipo_operacion=TipoOperacion.COMPRA,
             entidad=prov_alim,
-            fecha=timezone.now().date() - timedelta(days=10),
-            numero_documento="FACT-1001",
-            estado_pago=EstadoPago.PAGADO,
-            metodo_pago=MetodoPago.TRANSFERENCIA
+            defaults={
+                'fecha': timezone.now().date() - timedelta(days=10),
+                'estado_pago': EstadoPago.PAGADO,
+                'metodo_pago': MetodoPago.TRANSFERENCIA
+            }
         )
-        DetalleTransaccion.objects.create(transaccion=compra1, articulo=alimento_inicio, cantidad=1000, precio_unitario=480) # 480k
-        DetalleTransaccion.objects.create(transaccion=compra1, articulo=maiz, cantidad=500, precio_unitario=290) # 145k
-        # Total gets updated by signal usually, but let's ensure
-        compra1.monto_total = (1000*480) + (500*290)
-        compra1.save()
+        if created:
+            DetalleTransaccion.objects.create(transaccion=compra1, articulo=alimento_inicio, cantidad=1000, precio_unitario=480) # 480k
+            DetalleTransaccion.objects.create(transaccion=compra1, articulo=maiz, cantidad=500, precio_unitario=290) # 145k
+            # Total gets updated by signal usually, but let's ensure
+            compra1.monto_total = (1000*480) + (500*290)
+            compra1.save()
         
         # Ensure Stock (Signal handles it? Yes, we rely on signal for COMPRA)
         # But signals might not trigger on create if not careful, let's refresh stock manually just in case or trust logic.
         # My signals use POST_SAVE.
         
         # Compra Vacunas
-        compra2 = CabeceraTransaccion.objects.create(
+        compra2, created = CabeceraTransaccion.objects.get_or_create(
+            numero_documento="BOL-555",
             tipo_operacion=TipoOperacion.COMPRA,
             entidad=prov_vet,
-            fecha=timezone.now().date() - timedelta(days=5),
-            numero_documento="BOL-555",
-            estado_pago=EstadoPago.PAGADO
+            defaults={
+                'fecha': timezone.now().date() - timedelta(days=5),
+                'estado_pago': EstadoPago.PAGADO
+            }
         )
-        DetalleTransaccion.objects.create(transaccion=compra2, articulo=vacuna_newcastle, cantidad=200, precio_unitario=60000) # Expensive? maybe 60/dose
-        # Let's fix price
-        DetalleTransaccion.objects.filter(articulo=vacuna_newcastle).update(precio_unitario=60)
-        compra2.monto_total = 200 * 60
-        compra2.save()
+        if created:
+            DetalleTransaccion.objects.create(transaccion=compra2, articulo=vacuna_newcastle, cantidad=200, precio_unitario=60000) # Expensive? maybe 60/dose
+            # Let's fix price
+            DetalleTransaccion.objects.filter(articulo=vacuna_newcastle).update(precio_unitario=60)
+            compra2.monto_total = 200 * 60
+            compra2.save()
 
         # Produccion (Huevos) -> Add Stock manually via MovimientoInterno logic
         # OR just mock stock
@@ -147,27 +155,34 @@ class Command(BaseCommand):
         huevo_color.save()
 
         # Ventas
-        venta1 = CabeceraTransaccion.objects.create(
+        # Ventas
+        venta1, created = CabeceraTransaccion.objects.get_or_create(
+            numero_documento="BOL-001",
             tipo_operacion=TipoOperacion.VENTA,
             entidad=cliente_juan,
-            fecha=timezone.now().date(),
-            numero_documento="BOL-001",
-            estado_pago=EstadoPago.PAGADO,
-            metodo_pago=MetodoPago.EFECTIVO
+            defaults={
+                'fecha': timezone.now().date(),
+                'estado_pago': EstadoPago.PAGADO,
+                'metodo_pago': MetodoPago.EFECTIVO
+            }
         )
-        DetalleTransaccion.objects.create(transaccion=venta1, articulo=huevo_blanco, cantidad=100, precio_unitario=180)
-        venta1.monto_total = 100 * 180
-        venta1.save()
+        if created:
+            DetalleTransaccion.objects.create(transaccion=venta1, articulo=huevo_blanco, cantidad=100, precio_unitario=180)
+            venta1.monto_total = 100 * 180
+            venta1.save()
 
         # Gastos Simples
-        gasto1 = CabeceraTransaccion.objects.create(
+        # Gastos Simples
+        gasto1, created = CabeceraTransaccion.objects.get_or_create(
+            observaciones="Compra de guantes y mascarillas",
             tipo_operacion=TipoOperacion.COMPRA,
             entidad=prov_vet,
-            fecha=timezone.now().date() - timedelta(days=1),
-            monto_total=15000,
-            estado_pago=EstadoPago.PAGADO,
-            observaciones="Compra de guantes y mascarillas",
-            metodo_pago=MetodoPago.EFECTIVO
+            defaults={
+                'fecha': timezone.now().date() - timedelta(days=1),
+                'monto_total': 15000,
+                'estado_pago': EstadoPago.PAGADO,
+                'metodo_pago': MetodoPago.EFECTIVO
+            }
         )
 
         # 7. Movimientos Internos (Daily Farming Logic)
@@ -179,38 +194,38 @@ class Command(BaseCommand):
         for d in fechas_movs:
             # Lote 1 (Hy-Line): Produces Brown Eggs, Eats Alimento Inicio (or Engorde)
             # Produccion ~90% -> 495 birds * 0.9 = 445 eggs
-            MovimientoInterno.objects.create(
+            MovimientoInterno.objects.get_or_create(
                 lote=lote1,
                 articulo=huevo_color,
                 tipo_movimiento=TipoMovimiento.PRODUCCION,
-                cantidad=445,
-                fecha=d
+                fecha=d,
+                defaults={'cantidad': 445}
             )
             # Consumo ~110g/bird -> 495 * 0.11 = 54.45 kg
-            MovimientoInterno.objects.create(
+            MovimientoInterno.objects.get_or_create(
                 lote=lote1,
                 articulo=alimento_inicio,
                 tipo_movimiento=TipoMovimiento.CONSUMO,
-                cantidad=54.45,
-                fecha=d
+                fecha=d,
+                defaults={'cantidad': 54.45}
             )
             
             # Lote 2 (White): Produces White Eggs
             # Produccion ~95% -> 300 * 0.95 = 285 eggs
-            MovimientoInterno.objects.create(
+            MovimientoInterno.objects.get_or_create(
                 lote=lote2,
                 articulo=huevo_blanco,
                 tipo_movimiento=TipoMovimiento.PRODUCCION,
-                cantidad=285,
-                fecha=d
+                fecha=d,
+                defaults={'cantidad': 285}
             )
             # Consumo
-            MovimientoInterno.objects.create(
+            MovimientoInterno.objects.get_or_create(
                 lote=lote2,
                 articulo=alimento_inicio,
                 tipo_movimiento=TipoMovimiento.CONSUMO,
-                cantidad=33.0,
-                fecha=d
+                fecha=d,
+                defaults={'cantidad': 33.0}
             )
 
         self.stdout.write(self.style.SUCCESS('Movimientos Internos (Produccion/Consumo) creados'))

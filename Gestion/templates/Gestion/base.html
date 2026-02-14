@@ -181,6 +181,31 @@
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     {% block extra_js %}{% endblock %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        return;
+                    }
+
+                    const btn = form.querySelector('button[type="submit"]');
+                    if (btn) {
+                        if (btn.disabled) {
+                            event.preventDefault();
+                            return;
+                        }
+
+                        btn.disabled = true;
+                        // const originalContent = btn.innerHTML; // Store if needed to revert (e.g. via timeout or ajax error)
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...';
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 
 </html>

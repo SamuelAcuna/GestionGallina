@@ -21,8 +21,17 @@
 
                 <div class="mb-4">
                     <label class="form-label h5">Cantidad</label>
-                    <input type="number" step="0.01" name="cantidad" class="form-control form-control-lg"
-                        placeholder="10.5" required>
+                    <div class="input-group">
+                        <button type="button" class="btn btn-outline-danger" onclick="removeQuantity(25)">
+                            - 25 Kg
+                        </button>
+                        <input type="number" step="0.01" name="cantidad" id="input-cantidad"
+                            class="form-control form-control-lg" placeholder="10.5" required>
+                        <button type="button" class="btn btn-outline-primary" onclick="addQuantity(25)">
+                            + 25 Kg
+                        </button>
+                    </div>
+                    <div class="form-text">Presione "+ 25 Kg" para sumar bolsas.</div>
                 </div>
 
                 <button type="submit" class="btn btn-warning btn-lg w-100 py-3 fw-bold">
@@ -32,6 +41,21 @@
         </div>
     </div>
 </div>
+
+<script>
+    function addQuantity(amount) {
+        const input = document.getElementById('input-cantidad');
+        let currentVal = parseFloat(input.value) || 0;
+        input.value = (currentVal + amount).toFixed(2);
+    }
+    function removeQuantity(amount) {
+        const input = document.getElementById('input-cantidad');
+        let currentVal = parseFloat(input.value) || 0;
+        if (currentVal - amount >= 0) {
+            input.value = (currentVal - amount).toFixed(2);
+        }
+    }
+</script>
 
 <!-- Daily Log -->
 <div class="row justify-content-center mt-5">

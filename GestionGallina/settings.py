@@ -132,7 +132,7 @@ FORMAT_MODULE_PATH = [
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 # Authentication
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'

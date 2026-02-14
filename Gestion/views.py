@@ -135,6 +135,13 @@ def articulo_update(request, pk):
                 return redirect('articulo-update', pk=pk)
             else:
                 form = ArticuloForm(instance=articulo) # Restore main form
+        else:
+            # Fallback for unknown POST actions (e.g. implicit submit)
+            form = ArticuloForm(request.POST, instance=articulo)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Artículo actualizado exitosamente.')
+                return redirect('articulo-list')
     else:
         form = ArticuloForm(instance=articulo)
         
